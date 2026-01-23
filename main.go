@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 )
@@ -42,6 +44,25 @@ type Pattern struct {
 	Validator   func(content string) bool // Additional validation beyond regex
 }
 
+// Finding represents a single finding for JSON output
+type Finding struct {
+	PatternName string    `json:"pattern_name"`
+	Risk        RiskLevel `json:"risk"`
+	Description string    `json:"description"`
+	FilePath    string    `json:"file_path"`
+	LineNumber  int       `json:"line_number,omitempty"`
+	Preview     string    `json:"preview"`
+}
+
+// ScanResult represents the complete scan output for JSON
+type ScanResult struct {
+	ScanPath    string    `json:"scan_path"`
+	Timestamp   string    `json:"timestamp"`
+	FilterLevel string    `json:"filter_level"`
+	TotalIssues int       `json:"total_issues"`
+	Findings    []Finding `json:"findings"`
+}
+
 // Scanner holds the scanner configuration
 type Scanner struct {
 	Patterns    []Pattern
@@ -50,6 +71,8 @@ type Scanner struct {
 	ScanPath    string
 	SkipBinary  bool
 	MaxFileSize int64
+	JSONOutput  bool
+	Findings    []Finding
 }
 
 // Color functions
@@ -69,11 +92,12 @@ func main() {
 		mediumUp   = flag.Bool("medium-up", false, "Show MEDIUM and HIGH RISK findings")
 		help       = flag.Bool("help", false, "Show help")
 		skipBinary = flag.Bool("skip-binary", true, "Skip binary files")
+		jsonOutput = flag.Bool("json", false, "Output results in JSON format")
 	)
 
 	flag.Parse()
 
-	if *help || (flag.NFlag() == 0) {
+	if *help || (flag.NFlag() == 0 && flag.NArg() == 0) {
 		printHelp()
 		os.Exit(0)
 	}
@@ -90,17 +114,23 @@ func main() {
 		filterLevel = FilterMedium
 	}
 
-	scanner := NewScanner(*scanPath, filterLevel, *skipBinary)
+	scanner := NewScanner(*scanPath, filterLevel, *skipBinary, *jsonOutput)
 
-	fmt.Printf("%s\n", yellow("🔍 Scanning: "+*scanPath))
-	fmt.Println("================================")
+	if !*jsonOutput {
+		fmt.Printf("%s\n", yellow("🔍 Scanning: "+*scanPath))
+		fmt.Println("================================")
+	}
 
 	if err := scanner.Scan(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		if *jsonOutput {
+			json.NewEncoder(os.Stderr).Encode(map[string]string{"error": err.Error()})
+		} else {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
 		os.Exit(1)
 	}
 
-	scanner.PrintSummary()
+	scanner.Output()
 	os.Exit(scanner.IssuesFound)
 }
 
@@ -112,16 +142,19 @@ func printHelp() {
 	fmt.Println("  -high-only        Only show HIGH RISK findings")
 	fmt.Println("  -medium-up        Show MEDIUM and HIGH RISK findings")
 	fmt.Println("  -skip-binary      Skip binary files (default true)")
+	fmt.Println("  -json             Output results in JSON format")
 	fmt.Println("  -help             Show this help message")
 }
 
 // NewScanner creates a new scanner instance
-func NewScanner(path string, filter FilterLevel, skipBinary bool) *Scanner {
+func NewScanner(path string, filter FilterLevel, skipBinary bool, jsonOutput bool) *Scanner {
 	s := &Scanner{
 		ScanPath:    path,
 		FilterLevel: filter,
 		SkipBinary:  skipBinary,
 		MaxFileSize: 1024 * 1024, // 1MB
+		JSONOutput:  jsonOutput,
+		Findings:    []Finding{},
 	}
 	s.initPatterns()
 	return s
@@ -254,9 +287,8 @@ func (s *Scanner) checkFile(path string) {
 			if pattern.Validator(contentStr) {
 				matches := pattern.Regex.FindAllStringIndex(contentStr, 3)
 				if len(matches) > 0 {
-					// Apply filter
 					if s.shouldDisplay(pattern.Risk) {
-						s.printMatch(pattern, relPath, contentStr, matches)
+						s.recordMatch(pattern, relPath, contentStr, matches)
 					}
 					s.IssuesFound++
 				}
@@ -265,9 +297,8 @@ func (s *Scanner) checkFile(path string) {
 			// Pattern with regex only
 			matches := pattern.Regex.FindAllStringIndex(contentStr, 3)
 			if len(matches) > 0 {
-				// Apply filter
 				if s.shouldDisplay(pattern.Risk) {
-					s.printMatch(pattern, relPath, contentStr, matches)
+					s.recordMatch(pattern, relPath, contentStr, matches)
 				}
 				s.IssuesFound++
 			}
@@ -275,7 +306,7 @@ func (s *Scanner) checkFile(path string) {
 			// Pattern with validator only (e.g., for binary detection)
 			if pattern.Validator(contentStr) {
 				if s.shouldDisplay(pattern.Risk) {
-					s.printValidatorMatch(pattern, relPath)
+					s.recordValidatorMatch(pattern, relPath)
 				}
 				s.IssuesFound++
 			}
@@ -295,32 +326,39 @@ func (s *Scanner) shouldDisplay(risk RiskLevel) bool {
 	}
 }
 
-// printMatch prints a pattern match
-func (s *Scanner) printMatch(pattern Pattern, file string, content string, matches [][]int) {
-	riskColor := s.getRiskColor(pattern.Risk)
-	fmt.Printf("%s %s - %s\n", riskColor(string(pattern.Risk)), riskColor(pattern.Description), pattern.Name)
-
+// recordMatch collects a pattern match as findings
+func (s *Scanner) recordMatch(pattern Pattern, file string, content string, matches [][]int) {
 	for i, match := range matches {
 		if i >= 3 {
-			break // Only show first 3 matches
+			break // Only record first 3 matches
 		}
 
 		lineNum, preview := getLineInfo(content, match[0])
-		fmt.Printf("%s  File: %s:%d\n", blue(""), file, lineNum)
-
 		if len(preview) > 80 {
 			preview = preview[:80] + "..."
 		}
-		fmt.Printf("  Preview: %s\n\n", preview)
+
+		s.Findings = append(s.Findings, Finding{
+			PatternName: pattern.Name,
+			Risk:        pattern.Risk,
+			Description: pattern.Description,
+			FilePath:    file,
+			LineNumber:  lineNum,
+			Preview:     preview,
+		})
 	}
 }
 
-// printValidatorMatch prints a match found by validator only
-func (s *Scanner) printValidatorMatch(pattern Pattern, file string) {
-	riskColor := s.getRiskColor(pattern.Risk)
-	fmt.Printf("%s %s - %s\n", riskColor(string(pattern.Risk)), riskColor(pattern.Description), pattern.Name)
-	fmt.Printf("%s  File: %s\n", blue(""), file)
-	fmt.Printf("  Preview: [Requires manual review]\n\n")
+// recordValidatorMatch collects a validator-only match as a finding
+func (s *Scanner) recordValidatorMatch(pattern Pattern, file string) {
+	s.Findings = append(s.Findings, Finding{
+		PatternName: pattern.Name,
+		Risk:        pattern.Risk,
+		Description: pattern.Description,
+		FilePath:    file,
+		LineNumber:  0,
+		Preview:     "[Requires manual review]",
+	})
 }
 
 // getRiskColor returns the appropriate color function for a risk level
@@ -360,14 +398,64 @@ func getLineInfo(content string, pos int) (int, string) {
 	return lineNum, line
 }
 
-// PrintSummary prints the scan summary
-func (s *Scanner) PrintSummary() {
+// Output outputs scan results in the configured format
+func (s *Scanner) Output() {
+	if s.JSONOutput {
+		s.outputJSON()
+	} else {
+		s.outputText()
+	}
+}
+
+// outputText prints findings and summary in human-readable format
+func (s *Scanner) outputText() {
+	// Group findings by pattern for cleaner output
+	type patternKey struct {
+		name string
+		file string
+	}
+	printed := make(map[patternKey]bool)
+
+	for _, f := range s.Findings {
+		key := patternKey{f.PatternName, f.FilePath}
+		riskColor := s.getRiskColor(f.Risk)
+
+		// Print pattern header only once per pattern+file combo
+		if !printed[key] {
+			fmt.Printf("%s %s - %s\n", riskColor(string(f.Risk)), riskColor(f.Description), f.PatternName)
+			printed[key] = true
+		}
+
+		if f.LineNumber > 0 {
+			fmt.Printf("  File: %s:%d\n", f.FilePath, f.LineNumber)
+		} else {
+			fmt.Printf("  File: %s\n", f.FilePath)
+		}
+		fmt.Printf("  Preview: %s\n\n", f.Preview)
+	}
+
+	// Summary
 	fmt.Println("================================")
 	if s.IssuesFound == 0 {
 		fmt.Printf("%s\n", green("✅ Scan complete. No suspicious patterns detected."))
 	} else {
 		fmt.Printf("%s\n", red(fmt.Sprintf("⚠️  Scan complete. Found %d potential issue(s).", s.IssuesFound)))
 	}
+}
+
+// outputJSON outputs the scan results in JSON format
+func (s *Scanner) outputJSON() {
+	result := ScanResult{
+		ScanPath:    s.ScanPath,
+		Timestamp:   time.Now().UTC().Format(time.RFC3339),
+		FilterLevel: string(s.FilterLevel),
+		TotalIssues: s.IssuesFound,
+		Findings:    s.Findings,
+	}
+
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	encoder.Encode(result)
 }
 
 // checkForBidiChars checks for bidirectional Unicode characters
