@@ -1,4 +1,4 @@
-module github.com/adversis/sketchy
+module github.com/SuibhneOFoighil/sketchy
 
 go 1.21
 
