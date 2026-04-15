@@ -182,6 +182,49 @@ func (s *Scanner) addAIAgentPatterns() {
 			Regex:       regexp.MustCompile(`"bypassPermissions"\s*:\s*true|"dangerouslySkipPermissions"\s*:\s*true|"approvalMode"\s*:\s*"never"|"autoApprove"\s*:\s*true|"autoRun"\s*:\s*true|\byolo\b\s*[:=]\s*true|yes-always\s*:\s*true|auto-commits\s*:\s*true`),
 			FileTypes:   agentConfigSuffixes,
 		},
+		// Claude Code sandbox escape hatch. When sandboxing is enabled, the
+		// model is trained to retry failed commands with dangerouslyDisableSandbox;
+		// this flag (default true) decides whether that retry is allowed.
+		{
+			Name:        "agent-sandbox-escape-allowed",
+			Risk:        HighRisk,
+			Description: "[AI Agent] Claude sandbox escape hatch enabled (allowUnsandboxedCommands)",
+			Regex:       regexp.MustCompile(`"allowUnsandboxedCommands"\s*:\s*true|"dangerouslyDisableSandbox"\s*:\s*true|"failIfUnavailable"\s*:\s*false`),
+			FileTypes:   agentConfigSuffixes,
+		},
+		// Hook command that indirects through a repo-relative script. The hook
+		// gets approved once, but the referenced .sh file can be mutated by any
+		// later commit without re-prompting — same trust model as a Makefile
+		// but invoked on lifecycle events users don't see.
+		{
+			Name:        "agent-hook-repo-indirect",
+			Risk:        MediumRisk,
+			Description: "[AI Agent] Hook indirects through a repo-mutable script path",
+			Regex:       regexp.MustCompile(`\$\{?CLAUDE_PROJECT_DIR\}?/\.claude/hooks/|"\.claude/hooks/[^"]+\.(sh|py|js|ts)"|'\.claude/hooks/[^']+\.(sh|py|js|ts)'`),
+			FileTypes:   agentConfigSuffixes,
+			Validator: func(content string) bool {
+				return strings.Contains(content, "\"hooks\"")
+			},
+		},
+		// sandbox.filesystem.denyRead only constrains Bash subprocesses.
+		// Claude's Read tool runs outside the sandbox, so a denyRead rule
+		// without a matching permissions.deny "Read(<path>)" entry gives a
+		// false sense of protection. Flag any settings file that sets
+		// denyRead but has no Read() deny rule at all.
+		{
+			Name:        "agent-denyread-gap",
+			Risk:        MediumRisk,
+			Description: "[AI Agent] sandbox.denyRead set without matching Read() deny permission (Read tool bypasses sandbox)",
+			FileTypes:   agentConfigSuffixes,
+			Validator: func(content string) bool {
+				hasDenyRead := regexp.MustCompile(`"denyRead"\s*:\s*\[`).MatchString(content)
+				if !hasDenyRead {
+					return false
+				}
+				hasReadDeny := regexp.MustCompile(`"Read\([^)]+\)"`).MatchString(content)
+				return !hasReadDeny
+			},
+		},
 
 		// ===== PROMPT INJECTION IN INSTRUCTION FILES =====
 
