@@ -72,8 +72,8 @@ Expand-Archive -Path "sketchy.zip" -DestinationPath "."
 #### Build from source
 ```bash
 git clone https://github.com/adversis/sketchy
-cd sketchy
-go build -o sketchy .
+cd sketchy/go
+go build -o ../sketchy .
 ```
 
 #### Bash version (legacy, but still good!)
@@ -178,7 +178,7 @@ The codebase is simple:
 
 ```bash
 # Current platform
-go build -o sketchy .
+cd go && go build -o ../sketchy .
 
 # All platforms
 make cross-compile

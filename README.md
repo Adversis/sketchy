@@ -47,16 +47,19 @@ Or check out and run the bash script
 
 ```bash
 # Scan current directory
-sketchy -path .
+sketchy .
 
 # Scan specific path
-sketchy -path /path/to/repo
+sketchy /path/to/repo
 
 # Show only high-risk findings
-sketchy -high-only -path /path/to/repo
+sketchy -high-only /path/to/repo
 
 # Show medium and high risk findings
-sketchy -medium-up -path /path/to/repo
+sketchy -medium-up /path/to/repo
+
+# Skip noisy dependency directories (matches any nested occurrence)
+sketchy -ignore node_modules,vendor /path/to/repo
 
 # Help
 sketchy -help
@@ -119,17 +122,19 @@ Scan complete. Found 3 potential issue(s).
 ## Building for Different Platforms
 
 ```bash
+cd go
+
 # Build for current platform
-go build -o sketchy .
+go build -o ../sketchy .
 
 # Build for Windows
-GOOS=windows GOARCH=amd64 go build -o sketchy.exe .
+GOOS=windows GOARCH=amd64 go build -o ../sketchy.exe .
 
 # Build for macOS ARM64
-GOOS=darwin GOARCH=arm64 go build -o sketchy-darwin-arm64 .
+GOOS=darwin GOARCH=arm64 go build -o ../sketchy-darwin-arm64 .
 
 # Build for Linux
-GOOS=linux GOARCH=amd64 go build -o sketchy-linux-amd64 .
+GOOS=linux GOARCH=amd64 go build -o ../sketchy-linux-amd64 .
 ```
 
 ## Exit Codes
@@ -141,7 +146,7 @@ The scanner returns the number of issues found as the exit code:
 This makes it easy to use in CI/CD pipelines:
 
 ```bash
-sketchy -path ./repo || echo "Found $? security issues"
+sketchy ./repo || echo "Found $? security issues"
 ```
 
 ## Fine print

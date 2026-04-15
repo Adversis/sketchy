@@ -51,6 +51,7 @@ type Scanner struct {
 	ScanPath    string
 	SkipBinary  bool
 	MaxFileSize int64
+	IgnoreDirs  map[string]struct{}
 }
 
 // Color functions
@@ -65,23 +66,24 @@ var (
 
 func main() {
 	var (
-		scanPath   = flag.String("path", ".", "Path to scan")
 		highOnly   = flag.Bool("high-only", false, "Only show HIGH RISK findings")
 		mediumUp   = flag.Bool("medium-up", false, "Show MEDIUM and HIGH RISK findings")
 		help       = flag.Bool("help", false, "Show help")
 		skipBinary = flag.Bool("skip-binary", true, "Skip binary files")
+		ignore     = flag.String("ignore", "", "Comma-separated dir names to skip (any nested occurrence), e.g. node_modules,vendor")
 	)
+	flag.Usage = printHelp
 
 	flag.Parse()
 
-	if *help || (flag.NFlag() == 0) {
+	if *help || (flag.NFlag() == 0 && flag.NArg() == 0) {
 		printHelp()
 		os.Exit(0)
 	}
 
-	// Handle positional argument
+	scanPath := "."
 	if flag.NArg() > 0 {
-		*scanPath = flag.Arg(0)
+		scanPath = flag.Arg(0)
 	}
 
 	filterLevel := FilterAll
@@ -91,9 +93,10 @@ func main() {
 		filterLevel = FilterMedium
 	}
 
-	scanner := NewScanner(*scanPath, filterLevel, *skipBinary)
+	ignoreDirs := parseIgnoreList(*ignore)
+	scanner := NewScanner(scanPath, filterLevel, *skipBinary, ignoreDirs)
 
-	fmt.Printf("%s\n", yellow("🔍 Scanning: "+*scanPath))
+	fmt.Printf("%s\n", yellow("🔍 Scanning: "+scanPath))
 	fmt.Println("================================")
 
 	if err := scanner.Scan(); err != nil {
@@ -108,24 +111,42 @@ func main() {
 func printHelp() {
 	fmt.Println("sketchy - Security scanner for repositories")
 	fmt.Println("\nUsage: sketchy [options] [path]")
+	fmt.Println("\nScans [path] (default: current directory) for suspicious patterns.")
 	fmt.Println("\nOptions:")
-	fmt.Println("  -path string      Path to scan (default \".\")")
 	fmt.Println("  -high-only        Only show HIGH RISK findings")
 	fmt.Println("  -medium-up        Show MEDIUM and HIGH RISK findings")
+	fmt.Println("  -ignore string    Comma-separated dir names to skip (any nested occurrence)")
 	fmt.Println("  -skip-binary      Skip binary files (default true)")
 	fmt.Println("  -help             Show this help message")
+	fmt.Println("\nExamples:")
+	fmt.Println("  sketchy                                   # scan current directory")
+	fmt.Println("  sketchy ./some-repo                       # scan a specific path")
+	fmt.Println("  sketchy -high-only ./repo                 # only show HIGH RISK findings")
+	fmt.Println("  sketchy -ignore node_modules,vendor .     # skip noisy dep dirs")
 }
 
 // NewScanner creates a new scanner instance
-func NewScanner(path string, filter FilterLevel, skipBinary bool) *Scanner {
+func NewScanner(path string, filter FilterLevel, skipBinary bool, ignoreDirs map[string]struct{}) *Scanner {
 	s := &Scanner{
 		ScanPath:    path,
 		FilterLevel: filter,
 		SkipBinary:  skipBinary,
 		MaxFileSize: 1024 * 1024, // 1MB
+		IgnoreDirs:  ignoreDirs,
 	}
 	s.initPatterns()
 	return s
+}
+
+func parseIgnoreList(s string) map[string]struct{} {
+	out := map[string]struct{}{}
+	for _, raw := range strings.Split(s, ",") {
+		name := strings.TrimSpace(raw)
+		if name != "" {
+			out[name] = struct{}{}
+		}
+	}
+	return out
 }
 
 // Scan performs the security scan
@@ -134,27 +155,31 @@ func (s *Scanner) Scan() error {
 		return err
 	}
 
-	return filepath.Walk(s.ScanPath, func(path string, info os.FileInfo, err error) error {
+	return filepath.WalkDir(s.ScanPath, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
-			return nil // Skip files we can't access
-		}
-
-		// Skip directories and special files
-		if info.IsDir() || !info.Mode().IsRegular() {
 			return nil
 		}
 
-		// Skip files that are too large
-		if info.Size() > s.MaxFileSize {
+		if d.IsDir() {
+			if _, skip := s.IgnoreDirs[d.Name()]; skip && path != s.ScanPath {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 
-		// Skip common non-text files
+		if !d.Type().IsRegular() {
+			return nil
+		}
+
+		info, err := d.Info()
+		if err != nil || info.Size() > s.MaxFileSize {
+			return nil
+		}
+
 		if s.shouldSkipFile(path) {
 			return nil
 		}
 
-		// Check the file
 		s.checkFile(path)
 		return nil
 	})

@@ -7,16 +7,17 @@ LDFLAGS=-ldflags "-X main.Version=${VERSION}"
 all: build
 
 build:
-	go build ${LDFLAGS} -o ${BINARY_NAME} .
+	cd go && go build ${LDFLAGS} -o ../${BINARY_NAME} .
 
 test:
-	go test -v ./...
-	./${BINARY_NAME} test/test_malicious.py
-	./${BINARY_NAME} -high-only test/test_malicious.py | grep -c "HIGH RISK" || true
+	cd go && go test -v ./...
+	./${BINARY_NAME} go/testdata/samples/test_malicious.py
+	./${BINARY_NAME} -high-only go/testdata/samples/test_malicious.py | grep -c "HIGH RISK" || true
+
 	@echo "Tests completed"
 
 clean:
-	go clean
+	cd go && go clean
 	rm -f ${BINARY_NAME}
 	rm -f ${BINARY_NAME}-*
 
@@ -26,17 +27,17 @@ install: build
 cross-compile:
 	@echo "Building for multiple platforms..."
 	# macOS AMD64
-	GOOS=darwin GOARCH=amd64 go build ${LDFLAGS} -o ${BINARY_NAME}-darwin-amd64 .
+	cd go && GOOS=darwin GOARCH=amd64 go build ${LDFLAGS} -o ../${BINARY_NAME}-darwin-amd64 .
 	# macOS ARM64 (M1/M2)
-	GOOS=darwin GOARCH=arm64 go build ${LDFLAGS} -o ${BINARY_NAME}-darwin-arm64 .
+	cd go && GOOS=darwin GOARCH=arm64 go build ${LDFLAGS} -o ../${BINARY_NAME}-darwin-arm64 .
 	# Linux AMD64
-	GOOS=linux GOARCH=amd64 go build ${LDFLAGS} -o ${BINARY_NAME}-linux-amd64 .
+	cd go && GOOS=linux GOARCH=amd64 go build ${LDFLAGS} -o ../${BINARY_NAME}-linux-amd64 .
 	# Linux ARM64
-	GOOS=linux GOARCH=arm64 go build ${LDFLAGS} -o ${BINARY_NAME}-linux-arm64 .
+	cd go && GOOS=linux GOARCH=arm64 go build ${LDFLAGS} -o ../${BINARY_NAME}-linux-arm64 .
 	# Windows AMD64
-	GOOS=windows GOARCH=amd64 go build ${LDFLAGS} -o ${BINARY_NAME}-windows-amd64.exe .
+	cd go && GOOS=windows GOARCH=amd64 go build ${LDFLAGS} -o ../${BINARY_NAME}-windows-amd64.exe .
 	# Windows ARM64
-	GOOS=windows GOARCH=arm64 go build ${LDFLAGS} -o ${BINARY_NAME}-windows-arm64.exe .
+	cd go && GOOS=windows GOARCH=arm64 go build ${LDFLAGS} -o ../${BINARY_NAME}-windows-arm64.exe .
 	@echo "Cross-compilation complete!"
 
 release: cross-compile
@@ -50,10 +51,10 @@ release: cross-compile
 	@echo "Release archives created!"
 
 run:
-	./${BINARY_NAME} test/
+	-./${BINARY_NAME} go/testdata/samples/
 
 run-high:
-	./${BINARY_NAME} -high-only test/
+	-./${BINARY_NAME} -high-only go/testdata/samples/
 
 help:
 	@echo "Available targets:"
