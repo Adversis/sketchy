@@ -61,8 +61,47 @@ sketchy -medium-up /path/to/repo
 # Skip noisy dependency directories (matches any nested occurrence)
 sketchy -ignore node_modules,vendor /path/to/repo
 
+# Emit findings as JSON (for CI pipelines or editor integrations)
+sketchy -high-only --json /path/to/repo
+
 # Help
 sketchy -help
+```
+
+## Auto-scan on clone
+
+Sketchy is most useful the moment a suspicious repo lands on disk. Three ways to wire that up, in increasing automation:
+
+**One-shot** — run after any clone:
+```bash
+sketchy -high-only .
+```
+
+**Shell function** — drop into `~/.zshrc` or `~/.bashrc`:
+```sh
+gclone() {
+  git clone "$@" || return
+  local dir="$(basename "${!#}" .git)"
+  [ -d "$dir" ] && sketchy -high-only "$dir"
+}
+```
+
+**Global git hook** — one-time setup, covers CLI and VSCode's "Clone Repository" (both shell out to `git`):
+```bash
+# 1. Make sure sketchy is on PATH so the hook can find it
+sudo mv sketchy /usr/local/bin/   # or: go install ./go
+
+# 2. Install the hook
+bash scripts/install-git-hook.sh
+```
+
+This installs a `post-checkout` hook into a git template directory and sets `init.templateDir` globally. Only future clones are affected. The hook runs `sketchy -high-only` on the new repo and prints a warning if any HIGH findings surface — it never blocks the clone.
+
+> **Note:** The `sketchy` binary must be on `PATH` from git's environment (not just your interactive shell). `/usr/local/bin` works out of the box. If the binary isn't found at clone time, the hook prints a one-line notice and skips the scan.
+
+For machine-readable output (CI, editor integrations):
+```bash
+sketchy -high-only --json . | jq '.findings'
 ```
 
 ## Output

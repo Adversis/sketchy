@@ -1,0 +1,24 @@
+#!/bin/sh
+# sketchy post-checkout hook: scan freshly cloned repos for HIGH-risk findings.
+#
+# Git invokes: post-checkout <prev-head> <new-head> <flag>
+# On clone, prev-head is the null SHA (all zeros) and flag=1. Branch switches
+# pass the old branch's real SHA, so checking for the null SHA isolates clones.
+case "$1" in
+  0000000000000000000000000000000000000000) : ;;  # clone
+  *) exit 0 ;;                                     # not a clone, bail
+esac
+[ "$3" = "1" ] || exit 0
+
+if ! command -v sketchy >/dev/null 2>&1; then
+  echo "ℹ️  sketchy hook installed but 'sketchy' binary not on PATH — skipping scan." >&2
+  echo "   Install it somewhere on PATH (e.g. /usr/local/bin) to enable auto-scan." >&2
+  exit 0
+fi
+
+echo "🔍 sketchy: scanning newly cloned repo for HIGH-risk findings..."
+if ! sketchy -high-only "$PWD"; then
+  echo ""
+  echo "⚠️  sketchy found HIGH-risk findings. Review before running install/build commands."
+fi
+exit 0

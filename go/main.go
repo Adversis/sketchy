@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -52,6 +53,19 @@ type Scanner struct {
 	SkipBinary  bool
 	MaxFileSize int64
 	IgnoreDirs  map[string]struct{}
+	JSONOutput  bool
+	Findings    []Finding
+}
+
+// Finding is a single scan result, shaped for stable JSON consumers
+// (git hooks, the forthcoming VSCode extension).
+type Finding struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Risk        string `json:"risk"`
+	File        string `json:"file"`
+	Line        int    `json:"line"`
+	Preview     string `json:"preview"`
 }
 
 // Color functions
@@ -71,6 +85,7 @@ func main() {
 		help       = flag.Bool("help", false, "Show help")
 		skipBinary = flag.Bool("skip-binary", true, "Skip binary files")
 		ignore     = flag.String("ignore", "", "Comma-separated dir names to skip (any nested occurrence), e.g. node_modules,vendor")
+		jsonOut    = flag.Bool("json", false, "Emit findings as a single JSON object (suppresses human output)")
 	)
 	flag.Usage = printHelp
 
@@ -95,16 +110,34 @@ func main() {
 
 	ignoreDirs := parseIgnoreList(*ignore)
 	scanner := NewScanner(scanPath, filterLevel, *skipBinary, ignoreDirs)
+	scanner.JSONOutput = *jsonOut
 
-	fmt.Printf("%s\n", yellow("🔍 Scanning: "+scanPath))
-	fmt.Println("================================")
+	if !*jsonOut {
+		fmt.Printf("%s\n", yellow("🔍 Scanning: "+scanPath))
+		fmt.Println("================================")
+	}
 
 	if err := scanner.Scan(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		if *jsonOut {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+		} else {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
 		os.Exit(1)
 	}
 
-	scanner.PrintSummary()
+	if *jsonOut {
+		out := struct {
+			ScanPath    string    `json:"scan_path"`
+			IssuesFound int       `json:"issues_found"`
+			Findings    []Finding `json:"findings"`
+		}{scanPath, scanner.IssuesFound, scanner.Findings}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		_ = enc.Encode(out)
+	} else {
+		scanner.PrintSummary()
+	}
 	os.Exit(scanner.IssuesFound)
 }
 
@@ -117,6 +150,7 @@ func printHelp() {
 	fmt.Println("  -medium-up        Show MEDIUM and HIGH RISK findings")
 	fmt.Println("  -ignore string    Comma-separated dir names to skip (any nested occurrence)")
 	fmt.Println("  -skip-binary      Skip binary files (default true)")
+	fmt.Println("  -json             Emit findings as JSON (suppresses human output)")
 	fmt.Println("  -help             Show this help message")
 	fmt.Println("\nExamples:")
 	fmt.Println("  sketchy                                   # scan current directory")
@@ -299,9 +333,8 @@ func (s *Scanner) checkFile(path string) {
 			if pattern.Validator(contentStr) {
 				matches := pattern.Regex.FindAllStringIndex(contentStr, 3)
 				if len(matches) > 0 {
-					// Apply filter
 					if s.shouldDisplay(pattern.Risk) {
-						s.printMatch(pattern, relPath, contentStr, matches)
+						s.recordMatch(pattern, relPath, contentStr, matches)
 					}
 					s.IssuesFound++
 				}
@@ -310,9 +343,8 @@ func (s *Scanner) checkFile(path string) {
 			// Pattern with regex only
 			matches := pattern.Regex.FindAllStringIndex(contentStr, 3)
 			if len(matches) > 0 {
-				// Apply filter
 				if s.shouldDisplay(pattern.Risk) {
-					s.printMatch(pattern, relPath, contentStr, matches)
+					s.recordMatch(pattern, relPath, contentStr, matches)
 				}
 				s.IssuesFound++
 			}
@@ -320,7 +352,7 @@ func (s *Scanner) checkFile(path string) {
 			// Pattern with validator only (e.g., for binary detection)
 			if pattern.Validator(contentStr) {
 				if s.shouldDisplay(pattern.Risk) {
-					s.printValidatorMatch(pattern, relPath)
+					s.recordValidatorMatch(pattern, relPath)
 				}
 				s.IssuesFound++
 			}
@@ -338,6 +370,46 @@ func (s *Scanner) shouldDisplay(risk RiskLevel) bool {
 	default:
 		return true
 	}
+}
+
+// recordMatch routes a regex match to either the JSON buffer or stdout.
+func (s *Scanner) recordMatch(pattern Pattern, file string, content string, matches [][]int) {
+	if s.JSONOutput {
+		for i, m := range matches {
+			if i >= 3 {
+				break
+			}
+			lineNum, preview := getLineInfo(content, m[0])
+			if len(preview) > 200 {
+				preview = preview[:200]
+			}
+			s.Findings = append(s.Findings, Finding{
+				Name:        pattern.Name,
+				Description: pattern.Description,
+				Risk:        string(pattern.Risk),
+				File:        file,
+				Line:        lineNum,
+				Preview:     preview,
+			})
+		}
+		return
+	}
+	s.printMatch(pattern, file, content, matches)
+}
+
+// recordValidatorMatch routes a validator-only match to JSON or stdout.
+func (s *Scanner) recordValidatorMatch(pattern Pattern, file string) {
+	if s.JSONOutput {
+		s.Findings = append(s.Findings, Finding{
+			Name:        pattern.Name,
+			Description: pattern.Description,
+			Risk:        string(pattern.Risk),
+			File:        file,
+			Preview:     "[Requires manual review]",
+		})
+		return
+	}
+	s.printValidatorMatch(pattern, file)
 }
 
 // printMatch prints a pattern match
