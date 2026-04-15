@@ -50,6 +50,7 @@ target/
 *.o
 *.exe
 *.dll
+sketchy
 
 # Backup files
 *.bak

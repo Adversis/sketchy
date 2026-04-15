@@ -397,6 +397,9 @@ func (s *Scanner) initPatterns() {
 	
 	// Add Python specific patterns
 	s.addPythonPatterns()
+
+	// Add AI-agent config / instruction file patterns
+	s.addAIAgentPatterns()
 }
 
 // addDockerfilePatterns adds Dockerfile-specific patterns

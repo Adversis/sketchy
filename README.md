@@ -110,6 +110,11 @@ Scan complete. Found 3 potential issue(s).
 - Dockerfile-specific risks
 - GitHub Actions workflow risks
 - Language-specific patterns (Python, JavaScript, etc.)
+- AI agent config & instruction files — Claude Code, Codex, Cursor, Windsurf, Aider, Continue, Gemini CLI, Copilot:
+  - `settings.json` / MCP hook commands that pipe `curl|sh`, spawn reverse shells, or read `~/.ssh` / `~/.aws` / `.env`
+  - Wildcard permission grants (`Bash(*)`, `WebFetch(*)`) and `bypassPermissions` / `approvalMode: "never"` / `yolo` modes
+  - Prompt injection in `CLAUDE.md` / `AGENTS.md` / `GEMINI.md` / `.cursorrules` / `SKILL.md` ("ignore previous instructions", exec directives, API-key exfiltration, "do not mention this to the user")
+  - Zero-width / bidirectional unicode in agent instruction files (elevated risk — the model reads these directly)
 
 ## Building for Different Platforms
 

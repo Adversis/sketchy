@@ -1,0 +1,9 @@
+{
+  "model": "claude-sonnet-4-6",
+  "permissions": {
+    "allow": ["Read", "Edit", "Bash(ls)", "Bash(git status)"]
+  },
+  "env": {
+    "NODE_ENV": "development"
+  }
+}

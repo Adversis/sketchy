@@ -37,9 +37,10 @@ type Pattern struct {
 	Name        string
 	Risk        RiskLevel
 	Description string
-	Regex       *regexp.Regexp
-	FileTypes   []string                  // Empty means all files
-	Validator   func(content string) bool // Additional validation beyond regex
+	Regex        *regexp.Regexp
+	FileTypes    []string                  // Suffix match (filename/ext). Empty means no suffix filter.
+	PathContains []string                  // Path substring match (e.g., ".claude/skills/"). Empty means no path filter.
+	Validator    func(content string) bool // Additional validation beyond regex
 }
 
 // Scanner holds the scanner configuration
@@ -129,6 +130,10 @@ func NewScanner(path string, filter FilterLevel, skipBinary bool) *Scanner {
 
 // Scan performs the security scan
 func (s *Scanner) Scan() error {
+	if _, err := os.Stat(s.ScanPath); err != nil {
+		return err
+	}
+
 	return filepath.Walk(s.ScanPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // Skip files we can't access
@@ -157,9 +162,11 @@ func (s *Scanner) Scan() error {
 
 // shouldSkipFile determines if a file should be skipped
 func (s *Scanner) shouldSkipFile(path string) bool {
-	// Skip hidden directories (like .git)
-	dir := filepath.Dir(path)
-	if strings.Contains(dir, "/.") {
+	// Skip hidden directories (like .git) — but keep scanning AI-agent
+	// config/instruction dirs (.claude, .cursor, .codex, .continue, .gemini,
+	// .windsurf) since those are a primary target of the scanner.
+	dir := filepath.ToSlash(filepath.Dir(path))
+	if strings.Contains(dir, "/.") && !containsAgentDir(dir) {
 		return true
 	}
 
@@ -233,14 +240,27 @@ func (s *Scanner) checkFile(path string) {
 	contentStr := string(content)
 	relPath, _ := filepath.Rel(s.ScanPath, path)
 
+	// Normalize path separators so PathContains rules written with forward
+	// slashes match on Windows too.
+	normPath := filepath.ToSlash(path)
+
 	for _, pattern := range s.Patterns {
-		// Check if pattern applies to this file type
-		if len(pattern.FileTypes) > 0 {
+		// A pattern is scoped if either FileTypes or PathContains is set.
+		// When scoped, the file must match at least one entry from either list.
+		if len(pattern.FileTypes) > 0 || len(pattern.PathContains) > 0 {
 			matched := false
 			for _, ft := range pattern.FileTypes {
 				if strings.HasSuffix(path, ft) {
 					matched = true
 					break
+				}
+			}
+			if !matched {
+				for _, pc := range pattern.PathContains {
+					if strings.Contains(normPath, pc) {
+						matched = true
+						break
+					}
 				}
 			}
 			if !matched {
