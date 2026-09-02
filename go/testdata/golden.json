@@ -1,0 +1,416 @@
+[
+  {
+    "file": "ai-agents/positive/.claude/settings.json",
+    "line": 8,
+    "name": "agent-hook-curl-pipe",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.json",
+    "line": 8,
+    "name": "agent-hook-network-io",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.json",
+    "line": 8,
+    "name": "agent-hook-network-io",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.json",
+    "line": 8,
+    "name": "download-exec",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.json",
+    "line": 18,
+    "name": "agent-hook-network-io",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.json",
+    "line": 18,
+    "name": "agent-hook-secret-access",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.json",
+    "line": 18,
+    "name": "sensitive-exfil",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.json",
+    "line": 18,
+    "name": "ssh-theft",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.json",
+    "line": 25,
+    "name": "agent-permissions-wildcard",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.json",
+    "line": 25,
+    "name": "agent-permissions-wildcard",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.json",
+    "line": 25,
+    "name": "agent-permissions-wildcard",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.json",
+    "line": 27,
+    "name": "agent-bypass-mode",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.json",
+    "line": 30,
+    "name": "agent-mcp-shell-as-command",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.json",
+    "line": 31,
+    "name": "agent-hook-curl-pipe",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.json",
+    "line": 31,
+    "name": "download-exec",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.local.json",
+    "line": 8,
+    "name": "agent-hook-env-exfil",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.local.json",
+    "line": 8,
+    "name": "agent-hook-network-io",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.local.json",
+    "line": 8,
+    "name": "agent-hook-network-io",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.local.json",
+    "line": 18,
+    "name": "agent-hook-env-exfil",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.local.json",
+    "line": 18,
+    "name": "agent-hook-env-exfil",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.claude/settings.local.json",
+    "line": 18,
+    "name": "agent-hook-network-io",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.cursor/rules/sus.mdc",
+    "line": 0,
+    "name": "non-ascii",
+    "risk": "SUSPICIOUS"
+  },
+  {
+    "file": "ai-agents/positive/.cursor/rules/sus.mdc",
+    "line": 5,
+    "name": "agent-instr-zero-width",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/.cursor/rules/sus.mdc",
+    "line": 7,
+    "name": "agent-instr-exec-directive",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "ai-agents/positive/.cursor/rules/sus.mdc",
+    "line": 7,
+    "name": "agent-instr-hidden-behavior",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "ai-agents/positive/CLAUDE.md",
+    "line": 3,
+    "name": "agent-instr-ignore-previous",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/CLAUDE.md",
+    "line": 4,
+    "name": "agent-instr-exec-directive",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "ai-agents/positive/CLAUDE.md",
+    "line": 4,
+    "name": "download-exec",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/CLAUDE.md",
+    "line": 6,
+    "name": "agent-instr-hidden-behavior",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "ai-agents/positive/CLAUDE.md",
+    "line": 6,
+    "name": "agent-instr-hidden-behavior",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "ai-agents/positive/CLAUDE.md",
+    "line": 7,
+    "name": "agent-instr-exfil",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "ai-agents/positive/CLAUDE.md",
+    "line": 9,
+    "name": "agent-instr-ignore-previous",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_localhost.py",
+    "line": 7,
+    "name": "suspicious-network",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_localhost.py",
+    "line": 8,
+    "name": "suspicious-network",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_localhost.py",
+    "line": 13,
+    "name": "suspicious-network",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_localhost.py",
+    "line": 18,
+    "name": "eval-exec",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "samples/test_localhost.py",
+    "line": 19,
+    "name": "eval-exec",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "samples/test_localhost.py",
+    "line": 20,
+    "name": "eval-exec",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 9,
+    "name": "cmd-overwrite",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 9,
+    "name": "dangerous-file-ops",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 12,
+    "name": "code-execution",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 12,
+    "name": "eval-exec",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 13,
+    "name": "code-execution",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 13,
+    "name": "eval-exec",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 13,
+    "name": "py-deserialize",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 14,
+    "name": "code-execution",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 14,
+    "name": "dynamic-import",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 14,
+    "name": "eval-exec",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 14,
+    "name": "py-deserialize",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 18,
+    "name": "download-exec",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 22,
+    "name": "base64",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 25,
+    "name": "reverse-shell",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 28,
+    "name": "cloud-metadata",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 28,
+    "name": "cloud-metadata",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 28,
+    "name": "suspicious-network",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 31,
+    "name": "download-exec",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 31,
+    "name": "git-hooks",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 31,
+    "name": "hidden-files",
+    "risk": "LOW RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 37,
+    "name": "browser-creds",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 40,
+    "name": "cloud-creds",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 43,
+    "name": "crypto-miner",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 43,
+    "name": "crypto-miner",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 43,
+    "name": "crypto-miner",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
+    "line": 46,
+    "name": "docker-socket",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "samples/test_windows.ps1",
+    "line": 15,
+    "name": "cloud-metadata",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_windows.ps1",
+    "line": 15,
+    "name": "cloud-metadata",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_windows.ps1",
+    "line": 15,
+    "name": "suspicious-network",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_windows.ps1",
+    "line": 25,
+    "name": "dll-hijack",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "samples/test_windows.ps1",
+    "line": 26,
+    "name": "dll-hijack",
+    "risk": "MEDIUM RISK"
+  }
+]
