@@ -295,6 +295,12 @@
   },
   {
     "file": "samples/test_malicious.py",
+    "line": 14,
+    "name": "py-dynamic-loader",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
     "line": 18,
     "name": "download-exec",
     "risk": "HIGH RISK"

@@ -403,5 +403,8 @@ func (s *Scanner) initPatterns() {
 
 	// Add npm / JavaScript supply-chain patterns (ported from GuardDog)
 	s.addNpmPatterns()
+
+	// Add Python install-time patterns (ported from GuardDog)
+	s.addPythonInstallPatterns()
 }
 
