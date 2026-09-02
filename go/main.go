@@ -33,6 +33,11 @@ const (
 	FilterMedium FilterLevel = "MEDIUM"
 )
 
+// defaultMaxHits caps how many findings a single pattern reports for one
+// file when the pattern does not set MaxHits. Without a cap, a noisy rule
+// buries everything else in the output.
+const defaultMaxHits = 3
+
 // Pattern represents a detection pattern
 type Pattern struct {
 	Name        string
@@ -41,7 +46,17 @@ type Pattern struct {
 	Regex        *regexp.Regexp
 	FileTypes    []string                  // Suffix match (filename/ext). Empty means no suffix filter.
 	PathContains []string                  // Path substring match (e.g., ".claude/skills/"). Empty means no path filter.
+	PathExclude  []string                  // Path substring match that suppresses the rule. Beats FileTypes/PathContains.
+	MaxHits      int                       // Findings reported per file. Zero means defaultMaxHits.
 	Validator    func(content string) bool // Additional validation beyond regex
+}
+
+// hitLimit returns the effective per-file finding cap for a pattern.
+func (p Pattern) hitLimit() int {
+	if p.MaxHits > 0 {
+		return p.MaxHits
+	}
+	return defaultMaxHits
 }
 
 // Scanner holds the scanner configuration
@@ -304,6 +319,21 @@ func (s *Scanner) checkFile(path string) {
 	normPath := filepath.ToSlash(path)
 
 	for _, pattern := range s.Patterns {
+		// PathExclude wins over every other scoping rule, so a pattern can be
+		// kept out of vendored or generated trees regardless of file type.
+		if len(pattern.PathExclude) > 0 {
+			excluded := false
+			for _, pe := range pattern.PathExclude {
+				if strings.Contains(normPath, pe) {
+					excluded = true
+					break
+				}
+			}
+			if excluded {
+				continue
+			}
+		}
+
 		// A pattern is scoped if either FileTypes or PathContains is set.
 		// When scoped, the file must match at least one entry from either list.
 		if len(pattern.FileTypes) > 0 || len(pattern.PathContains) > 0 {
@@ -328,10 +358,11 @@ func (s *Scanner) checkFile(path string) {
 		}
 
 		// Check pattern
+		limit := pattern.hitLimit()
 		if pattern.Regex != nil && pattern.Validator != nil {
 			// Pattern with both regex and validator
 			if pattern.Validator(contentStr) {
-				matches := pattern.Regex.FindAllStringIndex(contentStr, 3)
+				matches := pattern.Regex.FindAllStringIndex(contentStr, limit)
 				if len(matches) > 0 {
 					if s.shouldDisplay(pattern.Risk) {
 						s.recordMatch(pattern, relPath, contentStr, matches)
@@ -341,7 +372,7 @@ func (s *Scanner) checkFile(path string) {
 			}
 		} else if pattern.Regex != nil {
 			// Pattern with regex only
-			matches := pattern.Regex.FindAllStringIndex(contentStr, 3)
+			matches := pattern.Regex.FindAllStringIndex(contentStr, limit)
 			if len(matches) > 0 {
 				if s.shouldDisplay(pattern.Risk) {
 					s.recordMatch(pattern, relPath, contentStr, matches)
@@ -375,8 +406,9 @@ func (s *Scanner) shouldDisplay(risk RiskLevel) bool {
 // recordMatch routes a regex match to either the JSON buffer or stdout.
 func (s *Scanner) recordMatch(pattern Pattern, file string, content string, matches [][]int) {
 	if s.JSONOutput {
+		limit := pattern.hitLimit()
 		for i, m := range matches {
-			if i >= 3 {
+			if i >= limit {
 				break
 			}
 			lineNum, preview := getLineInfo(content, m[0])
