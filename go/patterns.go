@@ -406,5 +406,8 @@ func (s *Scanner) initPatterns() {
 
 	// Add Python install-time patterns (ported from GuardDog)
 	s.addPythonInstallPatterns()
+
+	// Add credential-access / collection patterns (ported from GuardDog)
+	s.addCollectionPatterns()
 }
 
