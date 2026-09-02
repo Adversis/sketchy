@@ -409,5 +409,8 @@ func (s *Scanner) initPatterns() {
 
 	// Add credential-access / collection patterns (ported from GuardDog)
 	s.addCollectionPatterns()
+
+	// Add evasion / obfuscation / Windows-persistence patterns (GuardDog)
+	s.addEvasionPatterns()
 }
 

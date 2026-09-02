@@ -355,6 +355,12 @@
   },
   {
     "file": "samples/test_malicious.py",
+    "line": 34,
+    "name": "autostart-persistence",
+    "risk": "HIGH RISK"
+  },
+  {
+    "file": "samples/test_malicious.py",
     "line": 37,
     "name": "browser-creds",
     "risk": "HIGH RISK"
