@@ -400,5 +400,8 @@ func (s *Scanner) initPatterns() {
 
 	// Add AI-agent config / instruction file patterns
 	s.addAIAgentPatterns()
+
+	// Add npm / JavaScript supply-chain patterns (ported from GuardDog)
+	s.addNpmPatterns()
 }
 

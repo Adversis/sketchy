@@ -23,6 +23,17 @@ func scanContent(t *testing.T, filename, content string) []Finding {
 		t.Fatalf("write %s: %v", filename, err)
 	}
 
+	// checkFile swallows read errors and returns silently, which would show up
+	// as "pattern did not fire" and send you hunting for a regex bug that
+	// isn't there. Confirm the fixture is actually readable first.
+	if got, err := os.ReadFile(path); err != nil {
+		t.Fatalf("fixture %s is not readable, so this is an environment "+
+			"failure and not a rule failure: %v", filename, err)
+	} else if string(got) != content {
+		t.Fatalf("fixture %s read back as %d bytes, wrote %d",
+			filename, len(got), len(content))
+	}
+
 	s := NewScanner(dir, FilterAll, false, map[string]struct{}{})
 	s.JSONOutput = true
 	s.checkFile(path)
