@@ -38,6 +38,22 @@ const (
 // buries everything else in the output.
 const defaultMaxHits = 3
 
+// Identifies says whether a rule describes an attack or merely an ability.
+//
+// A threat is evidence of malice on its own and is always reported. A
+// capability describes what code can do -- spawn a process, decode base64 --
+// which ordinary code does constantly. A capability is reported only when a
+// threat matches the same file.
+//
+// The zero value is Threat on purpose: a rule nobody classifies behaves
+// exactly as it did before this field existed.
+type Identifies string
+
+const (
+	Threat     Identifies = ""
+	Capability Identifies = "capability"
+)
+
 // Pattern represents a detection pattern
 type Pattern struct {
 	Name        string
@@ -48,6 +64,7 @@ type Pattern struct {
 	PathContains []string                  // Path substring match (e.g., ".claude/skills/"). Empty means no path filter.
 	PathExclude  []string                  // Path substring match that suppresses the rule. Beats FileTypes/PathContains.
 	MaxHits      int                       // Findings reported per file. Zero means defaultMaxHits.
+	Identifies   Identifies                // Threat (zero value) or Capability. Capabilities need a paired threat.
 	Validator    func(content string) bool // Additional validation beyond regex
 }
 
@@ -57,6 +74,11 @@ func (p Pattern) hitLimit() int {
 		return p.MaxHits
 	}
 	return defaultMaxHits
+}
+
+// isCapability reports whether this rule needs a paired threat to be shown.
+func (p Pattern) isCapability() bool {
+	return p.Identifies == Capability
 }
 
 // Scanner holds the scanner configuration
