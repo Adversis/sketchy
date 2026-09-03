@@ -105,6 +105,8 @@ type Finding struct {
 	File        string `json:"file"`
 	Line        int    `json:"line"`
 	Preview     string `json:"preview"`
+	Identifies  string `json:"identifies,omitempty"`
+	PairedWith  string `json:"paired_with,omitempty"`
 }
 
 // Color functions
@@ -473,6 +475,8 @@ func (s *Scanner) recordMatch(pattern Pattern, file string, content string, matc
 				File:        file,
 				Line:        lineNum,
 				Preview:     preview,
+				Identifies:  string(pattern.Identifies),
+				PairedWith:  pattern.pairedWith,
 			})
 		}
 		return
@@ -489,6 +493,8 @@ func (s *Scanner) recordValidatorMatch(pattern Pattern, file string) {
 			Risk:        string(pattern.Risk),
 			File:        file,
 			Preview:     "[Requires manual review]",
+			Identifies:  string(pattern.Identifies),
+			PairedWith:  pattern.pairedWith,
 		})
 		return
 	}
@@ -498,11 +504,16 @@ func (s *Scanner) recordValidatorMatch(pattern Pattern, file string) {
 // printMatch prints a pattern match
 func (s *Scanner) printMatch(pattern Pattern, file string, content string, matches [][]int) {
 	riskColor := s.getRiskColor(pattern.Risk)
-	fmt.Printf("%s %s - %s\n", riskColor(string(pattern.Risk)), riskColor(pattern.Description), pattern.Name)
+	suffix := ""
+	if pattern.pairedWith != "" {
+		suffix = fmt.Sprintf(" (capability, paired with %s)", pattern.pairedWith)
+	}
+	fmt.Printf("%s %s%s - %s\n", riskColor(string(pattern.Risk)), riskColor(pattern.Description), suffix, pattern.Name)
 
+	limit := pattern.hitLimit()
 	for i, match := range matches {
-		if i >= 3 {
-			break // Only show first 3 matches
+		if i >= limit {
+			break // Honour the pattern's MaxHits, as the JSON path does
 		}
 
 		lineNum, preview := getLineInfo(content, match[0])

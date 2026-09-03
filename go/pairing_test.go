@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -113,5 +115,48 @@ func TestSuppressedCapabilityDoesNotCountAsIssue(t *testing.T) {
 	s.checkFile(path)
 	if s.IssuesFound != 0 {
 		t.Errorf("IssuesFound=%d after a suppressed capability, want 0", s.IssuesFound)
+	}
+}
+
+func TestPairedCapabilityCarriesProvenance(t *testing.T) {
+	got := scanWith(t, "x.js", "CAPABILITY and THREAT", []Pattern{capProbe(), threatProbe()})
+
+	var cap *Finding
+	for i := range got {
+		if got[i].Name == "cap-probe" {
+			cap = &got[i]
+		}
+	}
+	if cap == nil {
+		t.Fatal("cap-probe was not reported")
+	}
+	if cap.Identifies != string(Capability) {
+		t.Errorf("identifies=%q, want %q", cap.Identifies, Capability)
+	}
+	if cap.PairedWith != "threat-probe" {
+		t.Errorf("paired_with=%q, want %q", cap.PairedWith, "threat-probe")
+	}
+}
+
+// Threats carry neither field, so their JSON is byte-identical to before.
+func TestThreatFindingHasNoPairingFields(t *testing.T) {
+	got := scanWith(t, "x.js", "THREAT", []Pattern{capProbe(), threatProbe()})
+	if len(got) != 1 {
+		t.Fatalf("got %d findings, want 1", len(got))
+	}
+	if got[0].Identifies != "" || got[0].PairedWith != "" {
+		t.Errorf("threat carries pairing fields: identifies=%q paired_with=%q",
+			got[0].Identifies, got[0].PairedWith)
+	}
+}
+
+func TestThreatJSONHasNoNewKeys(t *testing.T) {
+	got := scanWith(t, "x.js", "THREAT", []Pattern{capProbe(), threatProbe()})
+	b, err := json.Marshal(got[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(b, []byte("identifies")) || bytes.Contains(b, []byte("paired_with")) {
+		t.Errorf("threat JSON gained keys, breaking the existing contract: %s", b)
 	}
 }
