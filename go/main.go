@@ -65,6 +65,7 @@ type Pattern struct {
 	PathExclude  []string                  // Path substring match that suppresses the rule. Beats FileTypes/PathContains.
 	MaxHits      int                       // Findings reported per file. Zero means defaultMaxHits.
 	Identifies   Identifies                // Threat (zero value) or Capability. Capabilities need a paired threat.
+	pairedWith   string                    // set at scan time, not authored: the threat that unlocked this capability
 	Validator    func(content string) bool // Additional validation beyond regex
 }
 
@@ -92,6 +93,7 @@ type Scanner struct {
 	IgnoreDirs  map[string]struct{}
 	JSONOutput  bool
 	Findings    []Finding
+	SuppressedCount int // capability-only matches withheld for lack of a paired threat
 }
 
 // Finding is a single scan result, shaped for stable JSON consumers
@@ -326,6 +328,15 @@ func isBinaryFile(path string) (bool, error) {
 	return float64(nonPrintable)/float64(len(buf)) > 0.3, nil
 }
 
+// pendingMatch is a match held back until the whole file has been evaluated,
+// because whether a capability is reported depends on whether some other
+// pattern in the same file turns out to be a threat.
+type pendingMatch struct {
+	pattern       Pattern
+	matches       [][]int
+	validatorOnly bool
+}
+
 // checkFile scans a single file for patterns
 func (s *Scanner) checkFile(path string) {
 	content, err := os.ReadFile(path)
@@ -339,6 +350,8 @@ func (s *Scanner) checkFile(path string) {
 	// Normalize path separators so PathContains rules written with forward
 	// slashes match on Windows too.
 	normPath := filepath.ToSlash(path)
+
+	var pending []pendingMatch
 
 	for _, pattern := range s.Patterns {
 		// PathExclude wins over every other scoping rule, so a pattern can be
@@ -379,37 +392,53 @@ func (s *Scanner) checkFile(path string) {
 			}
 		}
 
-		// Check pattern
 		limit := pattern.hitLimit()
-		if pattern.Regex != nil && pattern.Validator != nil {
-			// Pattern with both regex and validator
+		switch {
+		case pattern.Regex != nil && pattern.Validator != nil:
 			if pattern.Validator(contentStr) {
-				matches := pattern.Regex.FindAllStringIndex(contentStr, limit)
-				if len(matches) > 0 {
-					if s.shouldDisplay(pattern.Risk) {
-						s.recordMatch(pattern, relPath, contentStr, matches)
-					}
-					s.IssuesFound++
+				if m := pattern.Regex.FindAllStringIndex(contentStr, limit); len(m) > 0 {
+					pending = append(pending, pendingMatch{pattern: pattern, matches: m})
 				}
 			}
-		} else if pattern.Regex != nil {
-			// Pattern with regex only
-			matches := pattern.Regex.FindAllStringIndex(contentStr, limit)
-			if len(matches) > 0 {
-				if s.shouldDisplay(pattern.Risk) {
-					s.recordMatch(pattern, relPath, contentStr, matches)
-				}
-				s.IssuesFound++
+		case pattern.Regex != nil:
+			if m := pattern.Regex.FindAllStringIndex(contentStr, limit); len(m) > 0 {
+				pending = append(pending, pendingMatch{pattern: pattern, matches: m})
 			}
-		} else if pattern.Validator != nil {
-			// Pattern with validator only (e.g., for binary detection)
+		case pattern.Validator != nil:
 			if pattern.Validator(contentStr) {
-				if s.shouldDisplay(pattern.Risk) {
-					s.recordValidatorMatch(pattern, relPath)
-				}
-				s.IssuesFound++
+				pending = append(pending, pendingMatch{pattern: pattern, validatorOnly: true})
 			}
 		}
+	}
+
+	// Second pass. A capability is only worth reporting when a threat in the
+	// same file gives it a reason to exist. threatSeen deliberately ignores
+	// the display filter: if it did not, -high-only would report a different
+	// set of capabilities than a default scan.
+	threatName := ""
+	for _, pm := range pending {
+		if !pm.pattern.isCapability() {
+			threatName = pm.pattern.Name
+			break
+		}
+	}
+
+	for _, pm := range pending {
+		if pm.pattern.isCapability() {
+			if threatName == "" {
+				s.SuppressedCount++
+				continue
+			}
+			pm.pattern.pairedWith = threatName
+		}
+		if s.shouldDisplay(pm.pattern.Risk) {
+			if pm.validatorOnly {
+				s.recordValidatorMatch(pm.pattern, relPath)
+			} else {
+				s.recordMatch(pm.pattern, relPath, contentStr, pm.matches)
+			}
+		}
+		s.IssuesFound++
 	}
 }
 
