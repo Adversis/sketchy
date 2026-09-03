@@ -109,6 +109,15 @@ type Finding struct {
 	PairedWith  string `json:"paired_with,omitempty"`
 }
 
+// scanOutput is the JSON output structure for scan results.
+// Exported so tests can verify the schema without drift.
+type scanOutput struct {
+	ScanPath    string    `json:"scan_path"`
+	IssuesFound int       `json:"issues_found"`
+	Suppressed  int       `json:"suppressed"`
+	Findings    []Finding `json:"findings"`
+}
+
 // Color functions
 var (
 	red    = color.New(color.FgRed).SprintFunc()
@@ -168,12 +177,7 @@ func main() {
 	}
 
 	if *jsonOut {
-		out := struct {
-			ScanPath    string    `json:"scan_path"`
-			IssuesFound int       `json:"issues_found"`
-			Suppressed  int       `json:"suppressed"`
-			Findings    []Finding `json:"findings"`
-		}{scanPath, scanner.IssuesFound, scanner.SuppressedCount, scanner.Findings}
+		out := scanOutput{scanPath, scanner.IssuesFound, scanner.SuppressedCount, scanner.Findings}
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		_ = enc.Encode(out)

@@ -172,13 +172,15 @@ func summaryFor(t *testing.T, issues, suppressed int) string {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer r.Close()
+	defer func() { os.Stdout = old }()
+
 	os.Stdout = w
 
 	s := &Scanner{IssuesFound: issues, SuppressedCount: suppressed}
 	s.PrintSummary()
 
 	w.Close()
-	os.Stdout = old
 
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(r); err != nil {
@@ -206,14 +208,9 @@ func TestSummaryOmitsLineWhenNothingSuppressed(t *testing.T) {
 }
 
 func TestJSONOutputCarriesSuppressedKey(t *testing.T) {
-	// Mirrors the anonymous struct main() marshals, so the key name is pinned
-	// by a test rather than only by the code that emits it.
-	out := struct {
-		ScanPath    string    `json:"scan_path"`
-		IssuesFound int       `json:"issues_found"`
-		Suppressed  int       `json:"suppressed"`
-		Findings    []Finding `json:"findings"`
-	}{"p", 1, 42, nil}
+	// Uses the named scanOutput type from main(), so any future rename of the
+	// tag or field in production code will fail this test. No drift possible.
+	out := scanOutput{"p", 1, 42, nil}
 
 	b, err := json.Marshal(out)
 	if err != nil {
