@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -158,5 +159,67 @@ func TestThreatJSONHasNoNewKeys(t *testing.T) {
 	}
 	if bytes.Contains(b, []byte("identifies")) || bytes.Contains(b, []byte("paired_with")) {
 		t.Errorf("threat JSON gained keys, breaking the existing contract: %s", b)
+	}
+}
+
+// summaryFor captures what PrintSummary writes, so the suppression line can
+// be asserted on directly.
+func summaryFor(t *testing.T, issues, suppressed int) string {
+	t.Helper()
+
+	old := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = w
+
+	s := &Scanner{IssuesFound: issues, SuppressedCount: suppressed}
+	s.PrintSummary()
+
+	w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	if _, err := buf.ReadFrom(r); err != nil {
+		t.Fatal(err)
+	}
+	return buf.String()
+}
+
+func TestSummaryReportsSuppressedCount(t *testing.T) {
+	out := summaryFor(t, 3, 137)
+	if !strings.Contains(out, "137") {
+		t.Errorf("summary does not mention the suppressed count:\n%s", out)
+	}
+	if !strings.Contains(strings.ToLower(out), "suppress") {
+		t.Errorf("summary does not explain what the number means:\n%s", out)
+	}
+}
+
+// Nothing suppressed means no extra line, so ordinary scans read as before.
+func TestSummaryOmitsLineWhenNothingSuppressed(t *testing.T) {
+	out := summaryFor(t, 3, 0)
+	if strings.Contains(strings.ToLower(out), "suppress") {
+		t.Errorf("summary mentions suppression when nothing was suppressed:\n%s", out)
+	}
+}
+
+func TestJSONOutputCarriesSuppressedKey(t *testing.T) {
+	// Mirrors the anonymous struct main() marshals, so the key name is pinned
+	// by a test rather than only by the code that emits it.
+	out := struct {
+		ScanPath    string    `json:"scan_path"`
+		IssuesFound int       `json:"issues_found"`
+		Suppressed  int       `json:"suppressed"`
+		Findings    []Finding `json:"findings"`
+	}{"p", 1, 42, nil}
+
+	b, err := json.Marshal(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(b, []byte(`"suppressed":42`)) {
+		t.Errorf("suppressed key missing or misnamed: %s", b)
 	}
 }

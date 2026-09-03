@@ -171,8 +171,9 @@ func main() {
 		out := struct {
 			ScanPath    string    `json:"scan_path"`
 			IssuesFound int       `json:"issues_found"`
+			Suppressed  int       `json:"suppressed"`
 			Findings    []Finding `json:"findings"`
-		}{scanPath, scanner.IssuesFound, scanner.Findings}
+		}{scanPath, scanner.IssuesFound, scanner.SuppressedCount, scanner.Findings}
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		_ = enc.Encode(out)
@@ -578,6 +579,10 @@ func (s *Scanner) PrintSummary() {
 		fmt.Printf("%s\n", green("✅ Scan complete. No suspicious patterns detected."))
 	} else {
 		fmt.Printf("%s\n", red(fmt.Sprintf("⚠️  Scan complete. Found %d potential issue(s).", s.IssuesFound)))
+	}
+	if s.SuppressedCount > 0 {
+		fmt.Printf("    %d capability-only match(es) suppressed (no paired threat).\n",
+			s.SuppressedCount)
 	}
 }
 
