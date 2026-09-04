@@ -69,7 +69,9 @@ var corePositives = []fixture{
 	{"vm-detect", "evade.py", `if "VirtualBox" in dmi: sys.exit()`},
 	{"bidi-chars", "sneaky.go", "x := 1 // " + bidiOverride + " reversed"},
 	{"cyrillic-chars", "homograph.js", "var v" + cyrillicE + "rify = true;"},
-	{"non-ascii", "text.txt", "caf" + accentedE},
+	// non-ascii is a capability now, so the fixture needs a threat to pair
+	// with. socket.gethostbyname trips dns-ops, which remains a threat.
+	{"non-ascii", "text.txt", "caf" + accentedE + "\nsocket.gethostbyname(payload)"},
 }
 
 // scopedPositives cover patterns restricted by FileTypes: Dockerfiles,
@@ -162,6 +164,9 @@ var coreNegatives = []fixture{
 	{"non-ascii", "readme.txt", `Plain ASCII documentation, nothing unusual here.`},
 	{"cyrillic-chars", "app.go", `func main() { println("hello") }`},
 	{"bidi-chars", "app.go", `func main() { println("hello") }`},
+
+	// Demoted to capability: the trigger alone must now be suppressed.
+	{"non-ascii", "lone.txt", "caf" + accentedE},
 
 	// Agent rules are scoped to agent paths; the same content in ordinary
 	// project files must not fire.

@@ -381,6 +381,7 @@ func (s *Scanner) initPatterns() {
 		{
 			Name:        "non-ascii",
 			Risk:        Suspicious,
+			Identifies:  Capability,
 			Description: "Non-ASCII/Unicode characters detected",
 			Validator:   checkForNonASCII,
 		},
