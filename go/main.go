@@ -38,6 +38,19 @@ const (
 // buries everything else in the output.
 const defaultMaxHits = 3
 
+// minCapabilityCluster is the minimum number of capability rules that must
+// match one file before a cluster can form. It is a floor, not the whole
+// test — see capabilitiesAreDistinct, which additionally requires the
+// matches to sit at non-overlapping positions.
+//
+// One capability says nothing: ordinary code decodes base64, spawns
+// processes and builds strings constantly. Several distinct capabilities
+// stacked in a single file is a shape — `atob` feeding `eval` is the classic
+// loader stager, and neither half is a threat, so plain pairing cannot see
+// it. Reporting the cluster costs some false positives, which is the right
+// trade for a tool whose job is to warn before you run untrusted code.
+const minCapabilityCluster = 2
+
 // Identifies says whether a rule describes an attack or merely an ability.
 //
 // A threat is evidence of malice on its own and is always reported. A
@@ -450,13 +463,31 @@ func (s *Scanner) checkFile(path string) {
 		}
 	}
 
+	// Distinct capability rules that matched this file. Each pattern appears
+	// at most once in s.Patterns, so these names are already unique — a rule
+	// matching ten times still counts once. The signal is distinct abilities
+	// co-occurring, not match volume.
+	var capNames []string
 	for _, pm := range pending {
 		if pm.pattern.isCapability() {
-			if threatName == "" {
+			capNames = append(capNames, pm.pattern.Name)
+		}
+	}
+	clustered := threatName == "" && capabilitiesAreDistinct(pending)
+
+	for _, pm := range pending {
+		if pm.pattern.isCapability() {
+			switch {
+			case threatName != "":
+				// A real threat is the better citation.
+				pm.pattern.pairedWith = threatName
+			case clustered:
+				// No threat, but other capabilities justify this one.
+				pm.pattern.pairedWith = othersThan(pm.pattern.Name, capNames)
+			default:
 				s.SuppressedCount++
 				continue
 			}
-			pm.pattern.pairedWith = threatName
 		}
 		if s.shouldDisplay(pm.pattern.Risk) {
 			if pm.validatorOnly {
@@ -467,6 +498,60 @@ func (s *Scanner) checkFile(path string) {
 		}
 		s.IssuesFound++
 	}
+}
+
+// capabilitiesAreDistinct reports whether the capability matches in a file
+// are genuinely separate evidence, rather than several rules describing the
+// same piece of text.
+//
+// The distinction matters. `String.fromCharCode` matches both char-codes and
+// js-obfuscation at the identical span; that is one construct seen twice, not
+// two abilities, and treating it as a cluster would report every file that
+// builds a string. But `atob(blob)` on one line and `eval(p)` on the next are
+// two different things happening, which is the stager shape worth reporting.
+//
+// So two capabilities count only when each has a match the other does not
+// overlap. Validator-only rules carry no match positions, so they can join a
+// cluster but never form one — non-ascii is the only such capability, and it
+// fires on any accented character.
+func capabilitiesAreDistinct(pending []pendingMatch) bool {
+	type evidence struct {
+		spans [][]int
+	}
+	var caps []evidence
+	for _, pm := range pending {
+		if !pm.pattern.isCapability() || pm.validatorOnly {
+			continue
+		}
+		caps = append(caps, evidence{pm.matches})
+	}
+	if len(caps) < minCapabilityCluster {
+		return false
+	}
+	for i := range caps {
+		for j := i + 1; j < len(caps); j++ {
+			for _, a := range caps[i].spans {
+				for _, b := range caps[j].spans {
+					if a[1] <= b[0] || b[1] <= a[0] {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
+// othersThan lists every name except the one given, for citing which other
+// capabilities justified reporting this one.
+func othersThan(self string, all []string) string {
+	out := make([]string, 0, len(all))
+	for _, n := range all {
+		if n != self {
+			out = append(out, n)
+		}
+	}
+	return strings.Join(out, ", ")
 }
 
 // shouldDisplay checks if a risk level should be displayed based on filter

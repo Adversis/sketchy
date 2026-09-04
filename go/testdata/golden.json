@@ -192,6 +192,30 @@
     "risk": "HIGH RISK"
   },
   {
+    "file": "capability-only/fetch_paste.py",
+    "line": 2,
+    "name": "eval-exec",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "capability-only/fetch_paste.py",
+    "line": 2,
+    "name": "shady-urls",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "capability-only/stager.js",
+    "line": 2,
+    "name": "base64",
+    "risk": "MEDIUM RISK"
+  },
+  {
+    "file": "capability-only/stager.js",
+    "line": 3,
+    "name": "eval-exec",
+    "risk": "MEDIUM RISK"
+  },
+  {
     "file": "samples/test_localhost.py",
     "line": 7,
     "name": "suspicious-network",
