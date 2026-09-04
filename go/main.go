@@ -505,34 +505,41 @@ func (s *Scanner) checkFile(path string) {
 // same piece of text.
 //
 // The distinction matters. `String.fromCharCode` matches both char-codes and
-// js-obfuscation at the identical span; that is one construct seen twice, not
-// two abilities, and treating it as a cluster would report every file that
-// builds a string. But `atob(blob)` on one line and `eval(p)` on the next are
-// two different things happening, which is the stager shape worth reporting.
+// js-obfuscation starting at the same offset; that is one construct seen
+// twice, not two abilities, and treating it as a cluster would report every
+// file that builds a string. But `atob(blob)` on one line and `eval(p)` on
+// the next start in different places, which is the stager shape worth
+// reporting.
 //
-// So two capabilities count only when each has a match the other does not
-// overlap. Validator-only rules carry no match positions, so they can join a
-// cluster but never form one — non-ascii is the only such capability, and it
-// fires on any accented character.
+// Distinctness compares match START offsets, not whole spans. A rule can
+// match a very wide span — time-trigger's `setInterval(...,60000)` swallows
+// the whole callback body — and a span test would then treat every rule
+// matching inside it as the same evidence. Where a match begins is what says
+// which construct it describes.
+//
+// Validator-only rules carry no match positions, so they can join a cluster
+// but never form one — non-ascii is the only such capability, and it fires on
+// any accented character.
 func capabilitiesAreDistinct(pending []pendingMatch) bool {
-	type evidence struct {
-		spans [][]int
-	}
-	var caps []evidence
+	var starts [][]int
 	for _, pm := range pending {
 		if !pm.pattern.isCapability() || pm.validatorOnly {
 			continue
 		}
-		caps = append(caps, evidence{pm.matches})
+		s := make([]int, 0, len(pm.matches))
+		for _, m := range pm.matches {
+			s = append(s, m[0])
+		}
+		starts = append(starts, s)
 	}
-	if len(caps) < minCapabilityCluster {
+	if len(starts) < minCapabilityCluster {
 		return false
 	}
-	for i := range caps {
-		for j := i + 1; j < len(caps); j++ {
-			for _, a := range caps[i].spans {
-				for _, b := range caps[j].spans {
-					if a[1] <= b[0] || b[1] <= a[0] {
+	for i := range starts {
+		for j := i + 1; j < len(starts); j++ {
+			for _, a := range starts[i] {
+				for _, b := range starts[j] {
+					if a != b {
 						return true
 					}
 				}

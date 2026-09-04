@@ -126,7 +126,13 @@ func (s *Scanner) initPatterns() {
 			Risk:        MediumRisk,
 			Identifies:  Capability,
 			Description: "Time-based trigger detected",
-			Regex:       regexp.MustCompile(`(setTimeout\s*\([^,]+,\s*[0-9]{6,}|time\.sleep\s*\([0-9]{4,}|datetime.*days\s*[><=]|cron|schedule\.)`),
+			// setInterval matters as much as setTimeout: a periodic beacon is
+			// the commonest real use of a timer in malware. The delay floor is
+			// four digits, i.e. one second, because a beacon interval is
+			// measured in seconds — the old six-digit floor meant 100 seconds
+			// and missed every one of them. Sub-second delays stay excluded as
+			// ordinary UI and retry code.
+			Regex:       regexp.MustCompile(`(set(Timeout|Interval)\s*\([^,]+,\s*[0-9]{4,}|time\.sleep\s*\([0-9]{4,}|datetime.*days\s*[><=]|cron|schedule\.)`),
 		},
 		
 		// Dynamic imports
