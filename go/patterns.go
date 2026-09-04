@@ -114,6 +114,7 @@ func (s *Scanner) initPatterns() {
 		{
 			Name:        "package-manager",
 			Risk:        HighRisk,
+			Identifies:  Capability,
 			Description: "Package manager invoked from code",
 			Regex:       regexp.MustCompile(`(pip\s+install|npm\s+install|yarn\s+add|gem\s+install|cargo\s+install)`),
 		},
