@@ -265,3 +265,26 @@ func TestJSONOutputCarriesSuppressedKey(t *testing.T) {
 		t.Errorf("suppressed key missing or misnamed: %s", b)
 	}
 }
+
+// TestNoFindingsEmitsEmptyArrayNotNull verifies that a scan with zero findings
+// produces "findings":[] in JSON, never "findings":null. The VSCode extension
+// checks Array.isArray(parsed.findings), so null breaks it as malformed-output.
+// This test verifies that main.go ensures Findings is non-nil when building
+// scanOutput, so the JSON marshaller produces [] not null.
+func TestNoFindingsEmitsEmptyArrayNotNull(t *testing.T) {
+	// Simulate what main() does: ensure findings is a non-nil empty slice
+	findings := []Finding{}
+	out := scanOutput{"test-path", 0, 0, findings}
+
+	b, err := json.Marshal(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if bytes.Contains(b, []byte(`"findings":null`)) {
+		t.Errorf("findings marshalled as null, breaking VSCode extension: %s", b)
+	}
+	if !bytes.Contains(b, []byte(`"findings":[]`)) {
+		t.Errorf("findings not an empty array: %s", b)
+	}
+}

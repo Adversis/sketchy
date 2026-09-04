@@ -177,7 +177,11 @@ func main() {
 	}
 
 	if *jsonOut {
-		out := scanOutput{scanPath, scanner.IssuesFound, scanner.SuppressedCount, scanner.Findings}
+		findings := scanner.Findings
+		if findings == nil {
+			findings = []Finding{}
+		}
+		out := scanOutput{scanPath, scanner.IssuesFound, scanner.SuppressedCount, findings}
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		_ = enc.Encode(out)
