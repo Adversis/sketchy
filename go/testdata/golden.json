@@ -290,12 +290,6 @@
   {
     "file": "samples/test_malicious.py",
     "line": 14,
-    "name": "py-deserialize",
-    "risk": "MEDIUM RISK"
-  },
-  {
-    "file": "samples/test_malicious.py",
-    "line": 14,
     "name": "py-dynamic-loader",
     "risk": "HIGH RISK"
   },

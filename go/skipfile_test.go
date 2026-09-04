@@ -73,3 +73,40 @@ func TestDotAndDotDotAreNotTreatedAsHidden(t *testing.T) {
 		}
 	}
 }
+
+// py-deserialize is named for deserialization but its regex also matched
+// plain dynamic imports, which dynamic-import already covers. Because
+// py-deserialize is a threat, it paired dynamic-import back into visibility
+// on every Python file, making that demotion a no-op for .py.
+//
+// Narrowing it must not make it quiet about what it is actually for.
+func TestPyDeserializeStillCatchesDeserialization(t *testing.T) {
+	mustFire := []struct{ name, content string }{
+		{"pickle", `obj = pickle.loads(blob)`},
+		{"marshal", `code = marshal.loads(data)`},
+		{"codecs", `s = codecs.decode(payload, "rot13")`},
+		{"compile", `compile(src, "<string>", "exec")`},
+		{"exec-decode", `exec(blob.decode())`},
+	}
+	for _, c := range mustFire {
+		t.Run(c.name, func(t *testing.T) {
+			if !firedPatterns(scanContent(t, "x.py", c.content))["py-deserialize"] {
+				t.Errorf("py-deserialize went quiet on %s: %s", c.name, c.content)
+			}
+		})
+	}
+}
+
+// The overlap itself: a plugin loader is not deserialization.
+func TestPyDeserializeIgnoresPlainDynamicImport(t *testing.T) {
+	content := "mod = importlib.import_module(\"myapp.plugins.\" + name)\nmod.register()"
+	fired := firedPatterns(scanContent(t, "plugins.py", content))
+	if fired["py-deserialize"] {
+		t.Error("py-deserialize fired on a plain dynamic import")
+	}
+	// With no threat left in the file, the dynamic-import capability should
+	// now be suppressed — which is what demoting it was supposed to achieve.
+	if fired["dynamic-import"] {
+		t.Error("dynamic-import still reported; its demotion is still a no-op on .py")
+	}
+}
