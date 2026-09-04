@@ -1,0 +1,75 @@
+package main
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+// Scanning a relative path must skip the same directories as scanning an
+// absolute one. The old check searched for "/." in the path, so a hidden
+// directory at the scan root — ".git" rather than "/repo/.git" — had no
+// leading slash and was never skipped. That made "sketchy ." scan .git while
+// "sketchy /abs/path" did not.
+func TestHiddenDirsSkippedForRelativeAndAbsolutePaths(t *testing.T) {
+	root := t.TempDir()
+
+	// A file inside a hidden directory that must always be skipped.
+	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".git", "config"), []byte("eval(atob(x))"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// A normal file that must always be scanned.
+	if err := os.WriteFile(filepath.Join(root, "app.js"), []byte("eval(atob(x))"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s := NewScanner(root, FilterAll, false, map[string]struct{}{})
+
+	if !s.shouldSkipFile(filepath.Join(root, ".git", "config")) {
+		t.Error("absolute path inside .git was not skipped")
+	}
+	if !s.shouldSkipFile(filepath.Join(".git", "config")) {
+		t.Error("relative path inside .git was not skipped — this is the bug")
+	}
+	if s.shouldSkipFile(filepath.Join(root, "app.js")) {
+		t.Error("ordinary file was skipped")
+	}
+	if s.shouldSkipFile("app.js") {
+		t.Error("ordinary relative file was skipped")
+	}
+}
+
+// The hidden-directory skip has a deliberate exception: AI-agent config and
+// instruction directories are a primary scan target. Fixing the relative-path
+// bug must not start skipping those.
+func TestAgentDirsScannedForRelativeAndAbsolutePaths(t *testing.T) {
+	root := t.TempDir()
+	s := NewScanner(root, FilterAll, false, map[string]struct{}{})
+
+	cases := []string{
+		filepath.Join(root, ".claude", "settings.json"),
+		filepath.Join(".claude", "settings.json"),
+		filepath.Join(root, ".cursor", "rules", "x.mdc"),
+		filepath.Join(".cursor", "rules", "x.mdc"),
+	}
+	for _, p := range cases {
+		if s.shouldSkipFile(p) {
+			t.Errorf("agent config path was skipped: %s", p)
+		}
+	}
+}
+
+// "." and ".." are not hidden directories and must not cause a skip.
+func TestDotAndDotDotAreNotTreatedAsHidden(t *testing.T) {
+	root := t.TempDir()
+	s := NewScanner(root, FilterAll, false, map[string]struct{}{})
+
+	for _, p := range []string{"app.js", "./app.js", "../sibling/app.js"} {
+		if s.shouldSkipFile(p) {
+			t.Errorf("path was skipped but should not be: %s", p)
+		}
+	}
+}

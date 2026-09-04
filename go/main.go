@@ -269,13 +269,29 @@ func (s *Scanner) Scan() error {
 	})
 }
 
+// hasHiddenSegment reports whether any segment of dir starts with a dot.
+//
+// Segments are checked individually rather than searching the whole path for
+// "/.", because a relative scan puts the hidden directory first with no
+// leading slash: scanning "." yields ".git/config", where a substring test
+// finds nothing. That made "sketchy ." scan .git while "sketchy /abs/path"
+// skipped it. "." and ".." are not hidden and never match.
+func hasHiddenSegment(dir string) bool {
+	for _, seg := range strings.Split(dir, "/") {
+		if len(seg) > 1 && seg[0] == '.' && seg != ".." {
+			return true
+		}
+	}
+	return false
+}
+
 // shouldSkipFile determines if a file should be skipped
 func (s *Scanner) shouldSkipFile(path string) bool {
 	// Skip hidden directories (like .git) — but keep scanning AI-agent
 	// config/instruction dirs (.claude, .cursor, .codex, .continue, .gemini,
 	// .windsurf) since those are a primary target of the scanner.
 	dir := filepath.ToSlash(filepath.Dir(path))
-	if strings.Contains(dir, "/.") && !containsAgentDir(dir) {
+	if hasHiddenSegment(dir) && !containsAgentDir(dir) {
 		return true
 	}
 

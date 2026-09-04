@@ -69,7 +69,10 @@ var agentDirSegments = []string{
 // (or is) a known AI-agent config directory. Used by the file walker to
 // override the generic hidden-dir skip.
 func containsAgentDir(dir string) bool {
-	probe := dir + "/"
+	// Bracket with slashes on both sides so a relative path whose first
+	// segment is the agent directory (".claude/settings.json" -> dir
+	// ".claude") matches the same "/.claude" entries an absolute path does.
+	probe := "/" + dir + "/"
 	for _, seg := range agentDirSegments {
 		if strings.Contains(probe, seg) {
 			return true
