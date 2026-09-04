@@ -124,6 +124,7 @@ func (s *Scanner) initPatterns() {
 		{
 			Name:        "time-trigger",
 			Risk:        MediumRisk,
+			Identifies:  Capability,
 			Description: "Time-based trigger detected",
 			Regex:       regexp.MustCompile(`(setTimeout\s*\([^,]+,\s*[0-9]{6,}|time\.sleep\s*\([0-9]{4,}|datetime.*days\s*[><=]|cron|schedule\.)`),
 		},

