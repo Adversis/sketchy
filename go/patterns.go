@@ -133,6 +133,7 @@ func (s *Scanner) initPatterns() {
 		{
 			Name:        "dynamic-import",
 			Risk:        MediumRisk,
+			Identifies:  Capability,
 			Description: "Dynamic module loading",
 			Regex:       regexp.MustCompile(`(__import__|importlib\.import_module|require\(['"].*['"]\).replace|require\(.*\+|dynamic import)`),
 		},

