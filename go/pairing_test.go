@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -193,6 +194,61 @@ func TestSummaryOmitsLineWhenNothingSuppressed(t *testing.T) {
 	out := summaryFor(t, 3, 0)
 	if strings.Contains(strings.ToLower(out), "suppress") {
 		t.Errorf("summary mentions suppression when nothing was suppressed:\n%s", out)
+	}
+}
+
+// TestCapabilityRosterIsPinned pins the exact set of rules demoted to
+// Identifies: Capability. TestAllShippedRulesAreThreatsInitially was removed
+// when the first demotion landed, and nothing replaced it -- so an
+// accidental Identifies: Capability on the wrong rule would ship unnoticed.
+// If this test fails, diff "got" against "want" to see exactly which rule
+// was added or removed, and check it against the approved demotion list in
+// docs/superpowers/specs/2026-09-02-capability-threat-pairing-design.md
+// before changing this test's expectations.
+func TestCapabilityRosterIsPinned(t *testing.T) {
+	want := []string{
+		"base64", "char-codes", "dynamic-import", "eval-exec", "js-obfuscation",
+		"non-ascii", "package-manager", "shady-urls", "time-trigger", "websocket",
+	}
+	sort.Strings(want)
+
+	s := NewScanner(".", FilterAll, true, map[string]struct{}{})
+
+	var got []string
+	for _, p := range s.Patterns {
+		if p.isCapability() {
+			got = append(got, p.Name)
+		}
+	}
+	sort.Strings(got)
+
+	wantSet := make(map[string]bool, len(want))
+	for _, n := range want {
+		wantSet[n] = true
+	}
+	gotSet := make(map[string]bool, len(got))
+	for _, n := range got {
+		gotSet[n] = true
+	}
+
+	var added, removed []string
+	for _, n := range got {
+		if !wantSet[n] {
+			added = append(added, n)
+		}
+	}
+	for _, n := range want {
+		if !gotSet[n] {
+			removed = append(removed, n)
+		}
+	}
+
+	if len(added) > 0 || len(removed) > 0 {
+		t.Errorf("capability roster drifted from the approved ten\n"+
+			"  newly capability (unexpected):    %v\n"+
+			"  no longer capability (unexpected): %v\n"+
+			"got:  %v\n"+
+			"want: %v", added, removed, got, want)
 	}
 }
 
