@@ -9,12 +9,22 @@ all: build
 build:
 	cd go && go build ${LDFLAGS} -o ../${BINARY_NAME} .
 
-test:
-	cd go && go test -v ./...
-	./${BINARY_NAME} go/testdata/samples/test_malicious.py
-	./${BINARY_NAME} -high-only go/testdata/samples/test_malicious.py | grep -c "HIGH RISK" || true
-
-	@echo "Tests completed"
+# The scanner exits with the number of issues it found, so detecting
+# something is a NON-ZERO exit. Running the binary bare under make therefore
+# fails the build on success, which is why this target pipes its output and
+# asserts on counts instead. It also depends on build, since the previous
+# version invoked ./sketchy without ever creating it.
+test: build
+	cd go && go test ./...
+	@echo "smoke: known-malicious sample must produce HIGH findings"
+	@n=$$(./${BINARY_NAME} -json -high-only go/testdata/samples/test_malicious.py | grep -c '"risk": "HIGH RISK"' || true); \
+	 [ "$$n" -gt 0 ] || { echo "  FAIL: expected HIGH findings on the malicious sample, got none"; exit 1; }; \
+	 echo "  ok ($$n HIGH findings)"
+	@echo "smoke: benign agent config must produce none"
+	@n=$$(./${BINARY_NAME} -json go/testdata/ai-agents/negative | grep -c '"name":' || true); \
+	 [ "$$n" -eq 0 ] || { echo "  FAIL: expected 0 findings on the benign sample, got $$n"; exit 1; }; \
+	 echo "  ok"
+	@echo "All tests passed."
 
 clean:
 	cd go && go clean
