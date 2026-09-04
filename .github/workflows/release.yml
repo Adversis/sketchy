@@ -20,7 +20,14 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '1.21'
-    
+        # go.sum lives in go/, not the repo root, so the default cache
+        # lookup misses it and warns on every run.
+        cache-dependency-path: go/go.sum
+
+    - name: Test
+      working-directory: go
+      run: go test ./...
+
     - name: Build binaries
       working-directory: go
       run: |
