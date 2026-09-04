@@ -67,3 +67,6 @@ sketchy
 .env.local
 *.local
 config.local.*
+
+# Working design docs and implementation plans — kept local, not published
+docs/
