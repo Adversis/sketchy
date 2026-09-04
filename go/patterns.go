@@ -170,6 +170,7 @@ func (s *Scanner) initPatterns() {
 		{
 			Name:        "websocket",
 			Risk:        MediumRisk,
+			Identifies:  Capability,
 			Description: "WebSocket connection detected",
 			Regex:       regexp.MustCompile(`(WebSocket|ws\s*://|wss\s*://|socket\.io|SockJS)`),
 		},
