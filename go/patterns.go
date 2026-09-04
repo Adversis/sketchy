@@ -79,6 +79,7 @@ func (s *Scanner) initPatterns() {
 		{
 			Name:        "shady-urls",
 			Risk:        MediumRisk,
+			Identifies:  Capability,
 			Description: "[GuardDog] Suspicious shortened/paste URL",
 			Regex:       regexp.MustCompile(`(bit\.ly|tinyurl|short\.link|rebrand\.ly|t\.me|discord\.gg|pastebin\.com|hastebin\.com)`),
 		},

