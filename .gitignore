@@ -70,3 +70,9 @@ config.local.*
 
 # Working design docs and implementation plans — kept local, not published
 docs/
+
+# Test fixtures under go/testdata are deliberate sample data, including files
+# a global gitignore would normally exclude. A contributor's global rule for
+# **/.claude/settings.local.json silently kept this fixture out of the repo,
+# so the golden corpus passed locally and failed in CI.
+!go/testdata/**
