@@ -89,6 +89,7 @@ func (s *Scanner) initPatterns() {
 		{
 			Name:        "char-codes",
 			Risk:        MediumRisk,
+			Identifies:  Capability,
 			Description: "String obfuscation via character codes",
 			Regex:       regexp.MustCompile(`(chr\s*\([0-9]+\)|String\.fromCharCode|Buffer\([^)]+\)\.toString|\\x[0-9a-f]{2}|\\[0-7]{3})`),
 		},

