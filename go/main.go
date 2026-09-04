@@ -534,7 +534,11 @@ func (s *Scanner) printMatch(pattern Pattern, file string, content string, match
 // printValidatorMatch prints a match found by validator only
 func (s *Scanner) printValidatorMatch(pattern Pattern, file string) {
 	riskColor := s.getRiskColor(pattern.Risk)
-	fmt.Printf("%s %s - %s\n", riskColor(string(pattern.Risk)), riskColor(pattern.Description), pattern.Name)
+	suffix := ""
+	if pattern.pairedWith != "" {
+		suffix = fmt.Sprintf(" (capability, paired with %s)", pattern.pairedWith)
+	}
+	fmt.Printf("%s %s%s - %s\n", riskColor(string(pattern.Risk)), riskColor(pattern.Description), suffix, pattern.Name)
 	fmt.Printf("%s  File: %s\n", blue(""), file)
 	fmt.Printf("  Preview: [Requires manual review]\n\n")
 }
