@@ -29,17 +29,6 @@ func TestCapabilityPatternReportsAsCapability(t *testing.T) {
 	}
 }
 
-// Every rule in the shipped set must default to threat at this stage. This
-// test is what proves Task 1 changes no behaviour.
-func TestAllShippedRulesAreThreatsInitially(t *testing.T) {
-	s := NewScanner(".", FilterAll, false, map[string]struct{}{})
-	for _, p := range s.Patterns {
-		if p.isCapability() {
-			t.Errorf("rule %q is already a capability; Task 1 must not reclassify anything", p.Name)
-		}
-	}
-}
-
 func capProbe() Pattern {
 	return Pattern{
 		Name: "cap-probe", Risk: MediumRisk, Description: "capability probe",

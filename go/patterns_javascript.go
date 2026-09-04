@@ -7,6 +7,7 @@ func (s *Scanner) addJavaScriptPatterns() {
 		{
 			Name:        "js-obfuscation",
 			Risk:        MediumRisk,
+			Identifies:  Capability,
 			Description: "Potentially obfuscated JavaScript",
 			Regex:       regexp.MustCompile(`(\\x[0-9a-f]{2}|\\u[0-9a-f]{4}|String\.fromCharCode|unescape\(|document\.write\(|eval\(.*unescape)`),
 			FileTypes:   []string{".js", ".ts", ".jsx", ".tsx"},
